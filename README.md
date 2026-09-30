@@ -21,6 +21,7 @@ A small, controlled, observable warehouse-operations prototype. Two cooperating 
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 8–12 minute live demo steps |
 | [docs/REFLECTION.md](docs/REFLECTION.md) | Design decisions, **AI assistance disclosure**, changes from Phase 0, debugging lesson, risks, next steps |
 | [docs/OPTIONAL_FEATURES.md](docs/OPTIONAL_FEATURES.md) | Event-driven automation, metrics + evaluation harness, local-search optimizer |
+| [docs/UI_REDESIGN_PLAN.md](docs/UI_REDESIGN_PLAN.md) | UI redesign: reference mapping, design system, what was verified |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operations + progress log / resume guide |
 | [docs/results/](docs/results/) | Scenario results (deterministic and Gemini) and audit-log examples (JSONL + table) |
 

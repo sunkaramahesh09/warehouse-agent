@@ -88,4 +88,48 @@ POST: `/api/reset`, `/api/exceptions/:id/investigate`, `/api/approvals/:id/decid
 
 ## 7. Final report
 
-*(Filled in when the redesign is complete; see below.)*
+Completed 2026-09-30 on branch `feature/ui-redesign` (one commit per page), merged to `main` and tagged `v1.2-ui`.
+
+### 7.1 Pages redesigned
+All 12 routes plus the global shell, in the planned order: shell → Dashboard → Orders → Inventory & Shipments → Pickers → Exceptions (+ RunReport) → Approvals & Escalations (+ ApprovalCard, EscalationCard) → Shift Planner → Events & Automation → Audit Log → Metrics & Evaluation → Scenarios & Tests → Policies. Route keys are unchanged.
+
+### 7.2 Components created / reused
+New in `components/ui.tsx`: `StatCard` (container-query responsive), `SectionCard`, `PageHeader` (breadcrumb, illustration, action backdrop), `Badge`/`StatusBadge` (one status→tone map), `Chip`, `EmptyState`, `LoadingState`, `ProgressNote`, `ErrorBox` (operation + "no success recorded, check the audit log"), `Callout`, `SearchInput`, `Select`, `Tabs`, `Segmented`, `Toggle` (role="switch"), `Meter` (role="meter"), `usePaged` + `Pagination`, `Json`. `components/Illustration.tsx` holds original inline-SVG warehouse illustrations. The legacy `Card`/`Stat`/`Empty` aliases are kept for compatibility. `RunReport`, `ApprovalCard` and `EscalationCard` were restyled with the same props and the same API calls.
+
+### 7.3 Visual system
+The tokens in §3 are implemented in `index.css` (`@theme` colours, card shadow, component classes in `@layer components` so utilities win), with self-hosted Inter and lucide-react as the only icon set. Dashboard order-state colours come from the validated categorical palette (dataviz validator: all hard checks pass; the contrast warning is relieved by visible labels and counts). There are no sparklines or other decoration that would imply data the app doesn't have.
+
+### 7.4 Functional behaviour preserved
+Every GET/POST in §6 is still issued by the same control. Verified in a real browser, with server state checked through the API after each action:
+
+| Flow | Result |
+|---|---|
+| Exception resolver: EXC-2003 / 2004 / 2007 | AUTO_RESOLVED → SHIPPED / ESCALATED with state preserved / held, no approval, 3 unresolved questions |
+| Approval: EXC-2002 | Reviewer cannot approve → operator approves → EXECUTED, ORD-1011 CANCELLED. Reviewer resolves escalation → RESOLVED |
+| Planner | Generate v1 → cross-agent ORD-1004 BLOCKED by EXC-2001 (NEWLY_BLOCKED) → +45 min → P-02 unavailable → PROGRESS_PRESERVED_REASSIGNED + NEWLY_INFEASIBLE → urgent order ASSIGNED → injected failure = SYSTEM FAILURE with the previous plan still active → local-search strategy |
+| Events | Switches (optimistic + server) → cycle count → detect → 2 auto-investigations → holds → one coalesced auto-replan, all PROCESSED, audited |
+| Pickers | Mark unavailable/available → API → audit. Disabled for the reviewer role |
+| Audit | Filters match the API (STATE_CHANGE 2 = 2), run-id filter, expand, JSONL export |
+| Metrics | Run evaluation → 21 rows, 100% accuracy shown from `/api/metrics` |
+| Scenarios | Single run + Run all → 20/20 PASS, 127/127 checks |
+| Policies | 11/11 verbatim from `/api/policies` |
+| Reset | Header button → baseline |
+
+`git diff ui-redesign-start -- server` is **empty**: no backend, API, schema, planner, resolver, policy, audit or scenario change.
+
+### 7.5 Tests executed
+`npm run typecheck` (server + web) clean · `npm test` **54/54** · `npm run scenario -- all` **20/20** · `npm run build` OK · layout check (no horizontal page overflow, no console errors) for all 12 pages at 1440 / 1100 / 820 px · full DEMO_SCRIPT path (14 checks) locally **and** on the deployed URL · secret scan clean.
+
+### 7.6 Browser verification
+Headless Chromium (Playwright), driving real clicks and selects on a live server, with deterministic agent locally and the production configuration on Railway. Tablet navigation uses a drawer (verified at 820 px). Keyboard: visible focus ring on all interactive elements, a skip link, `aria-current` on nav, `role="switch"` / `role="meter"` / `role="tab"`, labelled selects, `role="alert"` / `role="status"` for errors and progress.
+
+### 7.7 Bugs discovered
+1. **Stale-response race in `useApi` (pre-existing).** After a replan the Shift Planner could display the *superseded* plan (v2) instead of the new active one (v3), because a slower response for the previous path overwrote the newer one. **Fixed with approval**: only the latest request may update state (`web/src/hooks.ts`, frontend-only). Verified by the planner flow ("UI shows active version").
+2. Layout-only issues found and fixed during verification: component CSS outside a cascade layer overrode utilities (hidden-menu button, input padding); grid items without `min-width: 0` let wide tables overflow the page; chips wrapping mid-id.
+
+### 7.8 Functional changes
+Only the approved `useApi` fix above. Additions are presentation-only: client-side search/filter/pagination/tabs over already-fetched data, the opt-in `wrap` badge variant, `aria-label`s, the auto-switch to the planner "Changes" tab after a replan, and derived display values that recompute nothing the backend owns (e.g. "short vs open demand" = remaining quantity of PENDING/PICKING orders vs the backend's `effective_available`, labelled as such; deadline "overdue" = deadline before the simulated clock).
+
+### 7.9 Deployment status
+Deployed to Railway (deployment `ca2bf997-a901-4b9e-959c-6be83f46ed92`) at https://app-production-fd3e.up.railway.app, verified with the full demo path and the 12-page layout check, then reset to the baseline seed. Rollback: tag `ui-redesign-start` (code) / Railway deployment `a575f534…` (previous UI).
+
