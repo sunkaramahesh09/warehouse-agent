@@ -30,6 +30,17 @@
 5. Optional polish only (see REFLECTION next improvements). After any code change: `npm test`, `npm run scenario -- all`, `railway up --service app --detach`, reset the live env, `git push`.
 6. User: record the demo (8–12 min) following `docs/DEMO_SCRIPT.md`, submit (only once!) before **Sun Oct 4 2026, 06:01 AM**.
 
+## 2a. Rollback / safe points
+
+| Safe point | Git | Railway deployment | What it contains |
+|---|---|---|---|
+| **v1.0-core** | tag `v1.0-core` (commit `0258da2`, pushed to GitHub) | `17feacdc-8788-46e4-81f2-c7980d7a1fb2` | Complete core submission: all MUST requirements, 50 tests, 18/18 scenarios, deployed and verified |
+
+Optional features are developed on branch `feature/optional-extras` and merged to `main` only after tests + scenarios pass.
+
+**Roll back code:** `git checkout main && git reset --hard v1.0-core && git push --force-with-lease origin main` (or just `git checkout v1.0-core` to inspect).
+**Roll back the live app:** `git checkout v1.0-core && railway up --service app --detach` (redeploys that code), or in the Railway dashboard → app → Deployments → `17feacdc…` → Redeploy. The DB schema is recreated by `POST /api/reset`, so after a code rollback always reset the environment.
+
 ## 3. Local development
 
 Prereqs: Node ≥ 22, Docker.
