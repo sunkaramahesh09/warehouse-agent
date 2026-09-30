@@ -137,7 +137,7 @@ export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustrat
           <h1 className="text-[28px] font-bold leading-tight tracking-tight text-navy md:text-[32px]">{title}</h1>
           {subtitle && <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
         </div>
-        <div className="relative flex flex-wrap items-center gap-2">{aside}{actions}</div>
+        {(aside || actions) && <div className={`relative flex flex-wrap items-center gap-2 ${illustration ? 'xl:rounded-2xl xl:bg-white/85 xl:p-2 xl:shadow-sm xl:ring-1 xl:ring-line xl:backdrop-blur' : ''}`}>{aside}{actions}</div>}
       </div>
     </div>
   );
