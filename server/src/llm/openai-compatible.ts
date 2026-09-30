@@ -44,12 +44,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
       clearTimeout(timer);
       if (res.status === 429 || res.status === 503) {
-        if (attempt < this.maxRetries - 1) {
-          const ra = Number(res.headers.get('retry-after'));
-          await sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra, 30) * 1000 : 4000 * 2 ** attempt);
-          continue;
-        }
-        throw new LLMError('RATE_LIMITED', `LLM provider returned ${res.status} after ${this.maxRetries} attempts`);
+        const text = await res.text();
+        // Gemini puts the wait in the body ("Please retry in 23.1s"); others use Retry-After.
+        const hinted = Number(res.headers.get('retry-after')) || Number(/retry in ([\d.]+)s/i.exec(text)?.[1]);
+        const waitMs = Number.isFinite(hinted) && hinted > 0 ? hinted * 1000 + 500 : 4000 * 2 ** attempt;
+        if (attempt < this.maxRetries - 1 && waitMs <= 35000) { await sleep(waitMs); continue; }
+        throw new LLMError('RATE_LIMITED', `LLM provider returned ${res.status} (${/quota|limit/i.test(text) ? 'quota exceeded' : 'overloaded'}) after ${attempt + 1} attempt(s)`);
       }
       if (!res.ok) {
         const text = (await res.text()).slice(0, 300);
@@ -61,10 +61,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
       return {
         role: 'assistant',
         content: msg.content ?? null,
+        ...(msg.extra_content !== undefined ? { extra_content: msg.extra_content } : {}),
         tool_calls: (msg.tool_calls ?? []).map((tc: any, i: number) => ({
           id: tc.id || `call_${Date.now()}_${i}`,
           type: 'function',
           function: { name: tc.function?.name, arguments: tc.function?.arguments ?? '{}' },
+          ...(tc.extra_content !== undefined ? { extra_content: tc.extra_content } : {}),
         })),
       };
     }

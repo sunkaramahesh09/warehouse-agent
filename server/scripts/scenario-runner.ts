@@ -40,7 +40,7 @@ if (list.length === SCENARIOS.length) {
     ...results.map((r) => `| \`${r.id}\` | ${r.category} | ${r.verdict} | ${r.passed}/${r.total} |`), '',
     ...results.flatMap((r) => [
       `## ${r.id} — ${r.title}`, '',
-      `- **Setup:** ${r.setup}`, `- **Trigger:** ${r.trigger}`, `- **Expected:** ${r.expected}`, `- **Boundary:** ${r.boundary}`, `- **Verdict:** ${r.verdict}`, '',
+      `- **Setup:** ${r.setup}`, `- **Trigger:** ${r.trigger}`, `- **Expected:** ${r.expected}`, `- **Boundary:** ${r.boundary}`, `- **Verdict:** ${r.verdict}`, ...(r.notes ? [`- **Agent runs:** ${r.notes}`] : []), '',
       '| Check | Expected | Actual | |', '|---|---|---|---|',
       ...r.checks.map((c) => `| ${c.name} | ${c.expected.replace(/\|/g, '/')} | ${c.actual.replace(/\|/g, '/')} | ${c.pass ? '✅' : '❌'} |`),
       ...((r.artifacts as any).tool_sequence ? ['', `Tool sequence: \`${(r.artifacts as any).tool_sequence}\``] : []), '',

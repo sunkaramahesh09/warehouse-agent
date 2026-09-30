@@ -6,7 +6,7 @@ export const config = {
   agentMode: (process.env.AGENT_MODE ?? 'auto') as 'auto' | 'llm' | 'deterministic',
   llm: {
     apiKey: process.env.LLM_API_KEY ?? '',
-    model: process.env.LLM_MODEL ?? 'gemini-2.5-flash',
+    model: process.env.LLM_MODEL ?? 'gemini-3.1-flash-lite',
     // Any OpenAI-compatible chat-completions endpoint (Gemini, OpenAI, Groq, ...).
     baseUrl: process.env.LLM_BASE_URL ?? 'https://generativelanguage.googleapis.com/v1beta/openai',
     timeoutMs: Number(process.env.LLM_TIMEOUT_MS ?? 30000),

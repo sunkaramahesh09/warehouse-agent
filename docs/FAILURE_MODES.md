@@ -1,0 +1,25 @@
+# Failure Modes and Mitigations
+
+Every failure below has an explicit state, a safe recovery, no false success, and an audit event. "Evidence" points to the scenario or test that exercises it.
+
+| # | Failure | Detection | Explicit state | Safe recovery | Audit | Evidence |
+|---|---|---|---|---|---|---|
+| F1 | **Missing record**: exception points at a non-existent order, or a shipment link points nowhere | Read tool returns `NOT_FOUND` (never an empty default) | Escalation with `missing_facts` | Human fixes the reference. Nothing is invented | `TOOL_ERROR` + `ESCALATION_CREATED` | `missing-record` |
+| F2 | **Malformed record**: qty −3, created_at after deadline | `validateOrderData()` in `get_order_lines` (resolver) and as a planner gate | Order ON_HOLD + escalation. Planner shows BLOCKED (INVALID_DATA) even before triage | Human corrects at source, then releases the hold (reviewer/approval) | `STATE_CHANGE`, `ESCALATION_CREATED` | `invalid-data`, planner unit test |
+| F3 | **Tool timeout / simulated API failure** on an action | Fault injection (`inject_fault`) → `TIMEOUT` / `UPSTREAM_ERROR` | Run `FAILED`, exception `FAILED`. Report: "status unknown → verification read shows NOT applied" | Re-run. Mutations are idempotent, so a retry cannot double-apply | `TOOL_FAILURE`, `FAILURE` | `tool-timeout` |
+| F4 | **Duplicate event/action**: double-click approve, re-running an investigation, same hold twice | `action_log` idempotency key. Atomic approval claim. Run refused when the exception is already handled | `duplicate: true` / `APPROVAL_NOT_PENDING` / `ALREADY_HANDLED` | Nothing to recover; the second request has no side effect | `DUPLICATE_SUPPRESSED`, `RUN_REFUSED` | `duplicate-action`, `duplicate-order` |
+| F5 | **Approval not received / rejected / expired** | Approval status machine. Expiry evaluated on the simulated clock (TTL in SOP-APR-001) | `PENDING` (nothing executes), `REJECTED` → escalation, `EXPIRED` → exception ESCALATED | Human decides manually. Late approvals are refused | `APPROVAL_DECISION`, escalation | `approval-expiry`, `duplicate-action` |
+| F6 | **Picker unavailable during planning / mid-shift** | Planner hard constraint (`availability = AVAILABLE`) | Invalidated work → `REASSIGNED` / `PROGRESS_PRESERVED_REASSIGNED`, or `INFEASIBLE (NO_SKILLED_PICKER)` | Incremental replan preserves completed and in-progress work | `SIM_CHANGE`, `PLAN_CHANGE` with change log | `replanning`, planner unit tests |
+| F7 | **Inventory changed between plan generation and dispatch** | Dispatch-time re-check inside `advance_clock` | Assignment `BLOCKED` "state changed since plan vN was generated". Nothing picked | Replan with trigger `INVENTORY_CHANGED` | `DISPATCH_BLOCKED` | `inventory-drift` |
+| F8 | **LLM misbehaviour**: fabricated citation, autonomous cancel/delete, claims it already acted, invalid args | Guard (citation must be retrieved in the run; SOP-APR-001 lists; conservatism). Zod on tool args. Claimed-action detector | Guard override recorded. Invalid args returned to the model as `INVALID_INPUT` | The permitted decision is executed; the model's text is ignored for outcomes | `DECISION` (with guard notes) | `unsafe-llm-proposal`, guard unit tests |
+| F9 | **LLM unavailable**: 429 quota, timeout, HTTP error, step budget exhausted | Provider errors (`RATE_LIMITED`, `TIMEOUT`...). Retry honours the server's retry hint | Run continues in mode `llm->deterministic` with `fallback_reason` shown in the UI | Deterministic investigator continues from the same evidence ledger | `LLM_FALLBACK` | observed with the free-tier quota during development |
+| F10 | **Planner error vs infeasibility** | Exception/fault in `generate_plan` | Run `FAILED`, `error.kind = SYSTEM_FAILURE`. No new version | Previous plan stays ACTIVE. Retry | `TOOL_ERROR` / `TOOL_FAILURE` | `planner-failure` |
+| F11 | **Policy gap**: no applicable SOP retrieved | `search_policies` returns `policy_gap: true`. The guard requires the governing policy to be retrieved | Escalate, no action | Add or fix the SOP | `DECISION` | guard unit test |
+| F12 | **Concurrent writers** (two operators, reset during a run) | Serialised mutating HTTP requests. Row locks (`FOR UPDATE`). `LOCK TABLE plans`. Reset under an advisory lock | Requests queue instead of interleaving | — | — | design |
+| F13 | **Crash mid-investigation** | try/catch around the run body | Exception set to `FAILED` (not stuck in INVESTIGATING), run FAILED | Re-run | `RUN_COMPLETED` (FAILED) | code path |
+
+## Principles applied
+
+- **A tool error is never evidence of success.** After any failed action the orchestrator re-reads the target record and reports what is actually true.
+- **The model's words are not state.** The report's action list comes only from tool results. Premature "I have placed…" claims are flagged.
+- **Fail closed.** Missing authority policy, missing evidence, or missing policy leads to escalation, not action.

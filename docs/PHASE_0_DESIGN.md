@@ -201,3 +201,10 @@ Full text: `POLICIES.md`.
 ## 9. Changes from the original plan
 
 Recorded during implementation. See also `REFLECTION.md`.
+
+1. **Planner does not read cycle counts.** It consumes the resolver's decision (order hold) and shows untriaged exceptions as warnings. This keeps triage in one place and makes the cross-agent effect observable (ORD-1004: ASSIGNED with warning in v1 → BLOCKED by EXC-2001 in v2).
+2. **`pickers.consumed_minutes` added.** Mid-shift replanning needs remaining capacity once simulated work has been done.
+3. **Per-picker sequence continues after completed work**, so unchanged assignments are reported as KEPT, not RESEQUENCED (bug found by a unit test).
+4. **Two workspaces instead of six packages; raw SQL instead of an ORM.** Same boundaries, less tooling (see ARCHITECTURE.md).
+5. **LLM model:** Gemini `gemini-3.1-flash-lite` (the planned 2.5 model is retired for new keys; free quota on 3.5-flash is 20 requests).
+6. **Added:** a claimed-action detector (the model narrated actions before they executed) and per-run agent mode in scenario results (a green suite had hidden LLM fallbacks).

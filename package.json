@@ -3,8 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "workspaces": ["server", "web"],
-  "engines": { "node": ">=22" },
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w web",
     "dev:api": "npm run dev -w server",
@@ -15,6 +20,7 @@
     "seed": "npm run reset -w server",
     "scenario": "npm run scenario -w server --",
     "test": "npm run test -w server",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "demo:trace": "npm run demo:trace -w server --"
   }
 }

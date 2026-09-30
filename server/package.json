@@ -8,7 +8,8 @@
     "reset": "tsx --env-file-if-exists=../.env scripts/reset.ts",
     "scenario": "tsx --env-file-if-exists=../.env scripts/scenario-runner.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo:trace": "tsx --env-file-if-exists=../.env scripts/demo-trace.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.5",

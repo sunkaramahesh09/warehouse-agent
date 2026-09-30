@@ -61,13 +61,13 @@ const SUBMIT_SPEC: ToolSpec = {
   parameters: {
     type: 'object',
     properties: {
-      decision: { type: 'string', enum: ['AUTO_ACTION', 'REQUEST_APPROVAL', 'ESCALATE', 'NO_ACTION_NEEDED'], description: 'AUTO_ACTION only for actions the authority policy lists as autonomous; REQUEST_APPROVAL for approval-gated actions; ESCALATE when records conflict, facts are missing, or the case is ambiguous.' },
+      decision: { type: 'string', enum: ['AUTO_ACTION', 'REQUEST_APPROVAL', 'ESCALATE', 'NO_ACTION_NEEDED'], description: 'AUTO_ACTION = the issue is fully resolved by autonomous actions alone, no human follow-up needed. REQUEST_APPROVAL = an approval-gated action (e.g. cancel) is needed; a hold may accompany it. ESCALATE = a human must investigate or act (records conflict, facts missing, ambiguous, replenishment needed); a hold may accompany it. NO_ACTION_NEEDED = evidence shows no problem.' },
       actions: { type: 'array', items: { type: 'string', enum: ACTION_VOCAB }, description: 'Actions you propose (may be empty). A hold may accompany an escalation or an approval request.' },
       policy_citations: { type: 'array', items: { type: 'object', properties: { policy_id: { type: 'string' }, why: { type: 'string' } }, required: ['policy_id', 'why'] }, description: 'Only policy ids returned by search_policies/get_policy in this investigation.' },
       findings: { type: 'array', items: { type: 'string' }, description: 'Facts established from tool results, with the numbers.' },
       unresolved_questions: { type: 'array', items: { type: 'string' } },
       recommended_human_action: { type: 'string' },
-      summary: { type: 'string', description: 'Two or three sentences for the operator.' },
+      summary: { type: 'string', description: 'Two or three sentences for the operator, phrased as a recommendation ("Recommend holding ORD-…"). Nothing has been executed yet: never say you performed an action.' },
     },
     required: ['decision', 'actions', 'policy_citations', 'summary'],
   },
@@ -104,10 +104,11 @@ Rules:
 - Choose tools based on what you have learned so far; do not call tools that cannot help.
 - Before proposing any action, retrieve the governing SOP with search_policies (and get_policy when you need full text or thresholds), and retrieve the action-authority policy.
 - Cite only policy ids returned by search_policies/get_policy in this investigation.
-- You cannot execute actions or approve anything. Autonomous actions are only those the authority policy lists as autonomous. Cancelling, merging, relinking or adjusting records require human approval or are prohibited.
+- You cannot execute actions or approve anything; you only propose. Never claim an action was performed. Autonomous actions are only those the authority policy lists as autonomous. Cancelling, merging, relinking or adjusting records require human approval or are prohibited.
 - When authoritative records conflict or the case is ambiguous: preserve state, hold unshipped work if permitted, and ESCALATE with the unresolved questions.
 - A shipment record or label alone is not evidence that an order shipped.
-- Do not do arithmetic you cannot verify from tool outputs; tools return computed facts (effective availability, label age, data issues).`;
+- Do not do arithmetic you cannot verify from tool outputs; tools return computed facts (effective availability, label age, data issues).
+- Be efficient: request independent tool calls in parallel in one turn, never repeat an identical call, and use at most two policy searches plus get_policy for ids you need in full. Call submit_decision as soon as the evidence and policies are in hand.`;
 
 export interface LLMInvestigation { proposal?: Proposal; fallbackReason?: string; llmTurns: number; guardFeedback: string[] }
 

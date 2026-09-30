@@ -41,8 +41,11 @@ const activePlan = async () => {
 const cites = (r: ResolverReport, id: string) => r.policies.some((p) => p.policy_id === id);
 const toolCalls = (r: ResolverReport) => r.steps.map((s) => s.tool).join(' → ');
 
+let runModes: string[] = [];
 async function resolve(exc: string, mode: 'deterministic' | 'llm') {
-  return investigateException(exc, { mode, actor: 'scenario-runner' });
+  const r = await investigateException(exc, { mode, actor: 'scenario-runner' });
+  runModes.push(`${exc}:${r.mode}${r.fallback_reason ? ` (fallback: ${r.fallback_reason})` : ''}`);
+  return r;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -231,7 +234,7 @@ export const SCENARIOS: Scenario[] = [
   // ------------------------------------------------------------------ planner
   {
     id: 'planning-cycle', category: 'planner', title: 'Full multi-order / multi-picker plan',
-    setup: 'Baseline: 10 plannable orders, 4 available pickers (P-05 out sick), uneven capacities, COLD/BULKY skills, 2 in-progress orders.',
+    setup: 'Baseline: 13 plannable orders (11 pending, 2 in progress), 4 available pickers (P-05 out sick), uneven capacities, COLD/BULKY skills, 2 in-progress orders.',
     trigger: 'Generate plan (INITIAL)',
     expected: 'Deterministic plan: no unavailable picker used, capacity never exceeded, in-progress kept, ORD-1014 infeasible (capacity), ORD-1015 blocked (inventory), ORD-1009 blocked (invalid data).',
     boundary: 'Arithmetic and feasibility in deterministic code only.',
@@ -564,13 +567,15 @@ export const scenarioById = (id: string) => SCENARIOS.find((s) => s.id === id);
 export async function runScenario(s: Scenario, mode: 'deterministic' | 'llm' = 'deterministic') {
   const started = Date.now();
   let out: ScenarioOutcome;
+  runModes = [];
   try {
     out = await s.run(mode);
   } catch (e) {
     out = { checks: [{ name: 'scenario executed', expected: 'no error', actual: (e as Error).message, pass: false }], artifacts: {} };
   }
+  if (runModes.length) out.notes = [out.notes, `resolver runs: ${runModes.join('; ')}`].filter(Boolean).join(' | ');
   const passed = out.checks.filter((c) => c.pass).length;
   const verdict = passed === out.checks.length ? 'PASS' : passed === 0 ? 'FAIL' : 'PARTIAL';
   await pool.query('INSERT INTO scenario_results (scenario_id, mode, verdict, checks, notes) VALUES ($1,$2,$3,$4,$5)', [s.id, mode, verdict, JSON.stringify(out.checks), out.notes ?? null]);
-  return { id: s.id, title: s.title, category: s.category, mode, verdict, passed, total: out.checks.length, ms: Date.now() - started, checks: out.checks, artifacts: out.artifacts, setup: s.setup, trigger: s.trigger, expected: s.expected, boundary: s.boundary };
+  return { id: s.id, title: s.title, category: s.category, mode, verdict, passed, total: out.checks.length, ms: Date.now() - started, checks: out.checks, notes: out.notes ?? null, artifacts: out.artifacts, setup: s.setup, trigger: s.trigger, expected: s.expected, boundary: s.boundary };
 }

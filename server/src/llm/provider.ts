@@ -2,13 +2,20 @@
  * LLM provider abstraction. The orchestrator depends only on this interface, so the
  * vendor is a configuration choice (LLM_BASE_URL / LLM_MODEL / LLM_API_KEY).
  */
-export interface ToolCall { id: string; type: 'function'; function: { name: string; arguments: string } }
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+  /** Provider-specific metadata that must be echoed back (e.g. Gemini 3 thought signatures). */
+  extra_content?: unknown;
+}
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | null;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
+  extra_content?: unknown;
 }
 export interface ToolSpec { name: string; description: string; parameters: Record<string, unknown> }
 

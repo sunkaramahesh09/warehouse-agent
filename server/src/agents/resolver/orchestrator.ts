@@ -22,6 +22,8 @@ import { deterministicInvestigate, llmInvestigate, proposalFromAssessment } from
 import { Ledger } from './ledger.js';
 import type { EscalationPayload } from '../../tools/action-tools.js';
 
+const CLAIMED_ACTION = /\b(i have|i've|i|has been|have been|was|were)\s+(already\s+)?(placed|held|put|cancell?ed|updated|synced|synchronized|escalated|marked|moved|resolved|executed)\b/i;
+
 export type Outcome = 'AUTO_RESOLVED' | 'HELD_AND_ESCALATED' | 'ESCALATED' | 'AWAITING_APPROVAL' | 'NO_ACTION_NEEDED' | 'FAILED';
 
 export interface ActionRecord {
@@ -143,6 +145,10 @@ async function runBody(exc: ExceptionRecord, ledger: Ledger, ctx: ToolCtx, provi
   const a = assess(exc, ledger);
   const authority = (await getPolicy(pool, 'SOP-APR-001'))?.params as any ?? null;
   const final = guard(proposal, a, ledger, authority);
+  // Model text is never evidence of success. Flag any pre-execution claim of having acted.
+  if (proposal.source === 'llm' && CLAIMED_ACTION.test(proposal.summary)) {
+    final.guard_notes.push('Agent text claimed an action was already performed before anything executed; claim ignored — action outcomes below come only from controlled tool results.');
+  }
   await audit(pool, {
     run_id: runId, workflow: 'EXCEPTION_RESOLVER', actor, event_type: 'DECISION',
     policy_refs: final.citations.map((c) => c.policy_id),
