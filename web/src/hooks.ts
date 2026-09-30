@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, onDataChanged } from './api';
 
 /** Fetch a GET endpoint; refetches whenever any mutation completes anywhere in the app. */
@@ -6,12 +6,16 @@ export function useApi<T = any>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Only the most recent request may update state. Fixes a race where a slower response for a
+  // previous path (e.g. superseded plan v2) overwrote the newer one (plan v3) after a replan.
+  const latest = useRef(0);
   const load = useCallback(async () => {
     if (!path) return;
+    const id = ++latest.current;
     setLoading(true);
-    try { setData(await api.get<T>(path)); setError(null); }
-    catch (e) { setError((e as Error).message); }
-    finally { setLoading(false); }
+    try { const d = await api.get<T>(path); if (id === latest.current) { setData(d); setError(null); } }
+    catch (e) { if (id === latest.current) setError((e as Error).message); }
+    finally { if (id === latest.current) setLoading(false); }
   }, [path]);
   useEffect(() => { load(); return onDataChanged(() => { load(); }); }, [load]);
   return { data, error, loading, reload: load };

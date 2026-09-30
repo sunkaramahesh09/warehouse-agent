@@ -24,6 +24,7 @@
 | Final acceptance checklist | ✅ | §6 |
 | **Optional features** (branch `feature/optional-extras`) | ✅ built: event-driven automation, metrics + eval harness, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios (det.), eval 100% (det. + Gemini). Deployed to Railway and verified live | `docs/OPTIONAL_FEATURES.md` |
 | Merge optional features to `main` | ✅ merged + tagged `v1.1-optional` | §2a |
+| UI redesign (reference screenshots in docs/ui-reference) | ✅ all 12 pages + shell; verified locally and live | `docs/UI_REDESIGN_PLAN.md` |
 | Clean LLM run of the 2 new scenarios | ⬜ blocked by Gemini free-tier daily quota (500/day, exhausted 2026-09-30). After the reset (midnight Pacific): `DATABASE_URL=…/warehouse_llm LLM_MIN_INTERVAL_MS=4500 npm run scenario -- all --llm`, check that the Agent-runs lines show no fallback, commit | §2 |
 
 ## 2. Next steps (in order)
@@ -38,7 +39,9 @@
 | Safe point | Git | Railway deployment | What it contains |
 |---|---|---|---|
 | **v1.0-core** | tag `v1.0-core` (commit `0258da2`, pushed to GitHub) | `17feacdc-8788-46e4-81f2-c7980d7a1fb2` | Complete core submission: all MUST requirements, 50 tests, 18/18 scenarios, deployed and verified |
-| **v1.1-optional** (current `main`) | tag `v1.1-optional` (merge `2155a87`) | `a575f534-6b17-4883-aa8e-c0f0c854b306` | + event-driven automation, metrics/eval, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios |
+| **v1.1-optional** | tag `v1.1-optional` (merge `2155a87`) | `a575f534-6b17-4883-aa8e-c0f0c854b306` | + event-driven automation, metrics/eval, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios |
+| **ui-redesign-start** | tag `ui-redesign-start` (= v1.1 + runbook) | `a575f534…` | Last state before the UI redesign |
+| **v1.2-ui** (current `main`) | tag `v1.2-ui` | `ca2bf997-a901-4b9e-959c-6be83f46ed92` | Presentation-layer redesign (docs/UI_REDESIGN_PLAN.md) + approved `useApi` race fix; backend unchanged |
 
 Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
