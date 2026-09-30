@@ -105,8 +105,8 @@ export function StatCard({ icon: I, label, value, hint, tone = 'slate', active =
       {I && <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${ICON_TILE[tone] ?? ICON_TILE.slate}`}><I className="h-5 w-5" aria-hidden /></div>}
       <div className="min-w-0">
         <div className={`text-2xl font-bold leading-tight tabular-nums ${VALUE_COLOR[tone] ?? VALUE_COLOR.slate}`}>{value}</div>
-        <div className="truncate text-[13px] font-medium text-slate-600">{label}</div>
-        {hint && <div className="truncate text-xs text-slate-400">{hint}</div>}
+        <div className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-600">{label}</div>
+        {hint && <div className="line-clamp-2 text-xs leading-snug text-slate-400">{hint}</div>}
       </div>
     </div>
   );
