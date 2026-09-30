@@ -19,15 +19,15 @@
 | Audit log examples | ✅ | `docs/results/audit-log-example.*` |
 | Docs (README, ARCHITECTURE, DATA_MODEL, POLICIES, SCENARIOS, FAILURE_MODES, DEMO_SCRIPT, REFLECTION) | ✅ written, URL included | `docs/`, `README.md` |
 | Railway deployment | ✅ live at https://app-production-fd3e.up.railway.app — full demo path verified in a browser with Gemini; environment reset to baseline afterwards | see §4 |
-| GitHub repo push | ⬜ not done — needs user decision (public/private, repo name) | — |
+| GitHub repo push | ✅ public: https://github.com/sunkaramahesh09/warehouse-agent | `git push` after each change |
 | Demo video | ⬜ user to record using `docs/DEMO_SCRIPT.md` | — |
 | Final acceptance checklist | ⬜ after deploy verification | §6 |
 
 ## 2. Next steps (in order)
 
 1. ~~Deploy + verify~~ ✅ · ~~URL in README/PRD_ANALYSIS~~ ✅ · ~~re-run tests/scenarios~~ ✅ (50/50, 18/18)
-4. Ask user: GitHub repo name + visibility → `gh repo create … --source . --push`.
-5. Run the acceptance checklist (§6), update this runbook, final commit + push.
+4. ~~GitHub push~~ ✅ · ~~acceptance checklist~~ ✅
+5. Optional polish only (see REFLECTION next improvements). After any code change: `npm test`, `npm run scenario -- all`, `railway up --service app --detach`, reset the live env, `git push`.
 6. User: record the demo (8–12 min) following `docs/DEMO_SCRIPT.md`, submit (only once!) before **Sun Oct 4 2026, 06:01 AM**.
 
 ## 3. Local development
@@ -77,4 +77,4 @@ Existing container on this machine: `warehouse-pg` (port 5433) with DBs `warehou
 - [x] infeasibility vs error · [x] replanning (picker unavailable + urgent order) · [x] plan versions · [x] cross-agent
 - [x] audit trail + examples · [x] failure handling (F1–F13) · [x] scenario runner · [x] 50 automated tests
 - [x] UI · [x] README · [x] Phase 0 · [x] architecture/policy/scenario docs · [x] reflection + AI disclosure · [x] demo script
-- [x] deployed URL verified · [ ] GitHub repo pushed · [x] no secrets committed (`.env` ignored) · [x] simulated labelling
+- [x] deployed URL verified · [x] GitHub repo pushed · [x] no secrets committed (`.env` ignored) · [x] simulated labelling

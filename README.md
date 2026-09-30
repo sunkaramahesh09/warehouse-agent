@@ -51,7 +51,7 @@ TypeScript everywhere · Node 22 · Fastify 5 · PostgreSQL 17 (`pg`, raw SQL) �
 ## Installation & setup
 
 ```bash
-git clone <this repo> && cd warehouse
+git clone https://github.com/sunkaramahesh09/warehouse-agent.git && cd warehouse-agent
 npm install
 
 # PostgreSQL on port 5433 (+ a separate DB for tests)
