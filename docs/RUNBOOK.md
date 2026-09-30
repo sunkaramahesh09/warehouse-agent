@@ -38,8 +38,9 @@
 | Safe point | Git | Railway deployment | What it contains |
 |---|---|---|---|
 | **v1.0-core** | tag `v1.0-core` (commit `0258da2`, pushed to GitHub) | `17feacdc-8788-46e4-81f2-c7980d7a1fb2` | Complete core submission: all MUST requirements, 50 tests, 18/18 scenarios, deployed and verified |
+| **v1.1-optional** (current `main`) | tag `v1.1-optional` (merge `2155a87`) | `a575f534-6b17-4883-aa8e-c0f0c854b306` | + event-driven automation, metrics/eval, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios |
 
-Optional features are developed on branch `feature/optional-extras` and merged to `main` only after tests + scenarios pass.
+Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
 **Roll back code:** `git checkout main && git reset --hard v1.0-core && git push --force-with-lease origin main` (or just `git checkout v1.0-core` to inspect).
 **Roll back the live app:** `git checkout v1.0-core && railway up --service app --detach` (redeploys that code), or in the Railway dashboard → app → Deployments → `17feacdc…` → Redeploy. The DB schema is recreated by `POST /api/reset`, so after a code rollback always reset the environment.
