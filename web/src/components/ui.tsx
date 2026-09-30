@@ -1,82 +1,300 @@
-import { useState, type ReactNode } from 'react';
+/**
+ * Shared presentation components (design system). Presentation only — no data fetching,
+ * no business rules. Every page composes these so the app reads as one product.
+ */
+import { useId, useState, type ComponentType, type ReactNode } from 'react';
+import { AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Info, Loader2, Search, type LucideProps } from 'lucide-react';
+import { Illustration, type IllustrationKind } from './Illustration';
 
-const TONES: Record<string, string> = {
-  // order / assignment statuses
-  PENDING: 'bg-slate-100 text-slate-700 ring-slate-300',
-  PICKING: 'bg-sky-50 text-sky-700 ring-sky-300',
-  PICKED: 'bg-indigo-50 text-indigo-700 ring-indigo-300',
-  PACKED: 'bg-violet-50 text-violet-700 ring-violet-300',
-  SHIPPED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  ON_HOLD: 'bg-amber-50 text-amber-800 ring-amber-300',
-  CANCELLED: 'bg-zinc-100 text-zinc-500 ring-zinc-300 line-through',
-  ASSIGNED: 'bg-teal-50 text-teal-700 ring-teal-300',
-  IN_PROGRESS: 'bg-sky-50 text-sky-700 ring-sky-300',
-  COMPLETED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  BLOCKED: 'bg-amber-50 text-amber-800 ring-amber-300',
-  INFEASIBLE: 'bg-rose-50 text-rose-700 ring-rose-300',
-  // exception / run outcomes
-  OPEN: 'bg-slate-100 text-slate-700 ring-slate-300',
-  INVESTIGATING: 'bg-sky-50 text-sky-700 ring-sky-300',
-  AWAITING_APPROVAL: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-300',
-  RESOLVED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  AUTO_RESOLVED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  NO_ACTION_NEEDED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  ESCALATED: 'bg-orange-50 text-orange-700 ring-orange-300',
-  HELD_AND_ESCALATED: 'bg-orange-50 text-orange-700 ring-orange-300',
-  FAILED: 'bg-rose-50 text-rose-700 ring-rose-300',
-  CLOSED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
-  APPROVED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  EXECUTED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  REJECTED: 'bg-rose-50 text-rose-700 ring-rose-300',
-  EXPIRED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
-  AVAILABLE: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  UNAVAILABLE: 'bg-rose-50 text-rose-700 ring-rose-300',
-  ACTIVE: 'bg-teal-50 text-teal-700 ring-teal-300',
-  SUPERSEDED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
-  PROCESSED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  SKIPPED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
-  PASS: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
-  PARTIAL: 'bg-amber-50 text-amber-800 ring-amber-300',
-  FAIL: 'bg-rose-50 text-rose-700 ring-rose-300',
+export type Icon = ComponentType<LucideProps>;
+
+// ------------------------------------------------------------------ status badges
+type Tone = 'neutral' | 'info' | 'brand' | 'success' | 'warning' | 'orange' | 'danger' | 'violet' | 'fuchsia' | 'muted';
+const TONE_CLASS: Record<Tone, string> = {
+  neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
+  info: 'bg-sky-50 text-sky-700 ring-sky-200',
+  brand: 'bg-teal-50 text-teal-800 ring-teal-200',
+  success: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  warning: 'bg-amber-50 text-amber-800 ring-amber-200',
+  orange: 'bg-orange-50 text-orange-700 ring-orange-200',
+  danger: 'bg-rose-50 text-rose-700 ring-rose-200',
+  violet: 'bg-violet-50 text-violet-700 ring-violet-200',
+  fuchsia: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
+  muted: 'bg-zinc-100 text-zinc-500 ring-zinc-200',
+};
+const DOT: Record<Tone, string> = {
+  neutral: 'bg-slate-400', info: 'bg-sky-500', brand: 'bg-teal-600', success: 'bg-emerald-500', warning: 'bg-amber-500',
+  orange: 'bg-orange-500', danger: 'bg-rose-500', violet: 'bg-violet-500', fuchsia: 'bg-fuchsia-500', muted: 'bg-zinc-400',
 };
 
-export function Badge({ v, title }: { v: string | null | undefined; title?: string }) {
+/** Single status → tone map used everywhere (orders, plans, exceptions, approvals, events, tests). */
+const STATUS_TONE: Record<string, Tone> = {
+  PENDING: 'neutral', PICKING: 'info', PICKED: 'violet', PACKED: 'violet', SHIPPED: 'success', ON_HOLD: 'warning', CANCELLED: 'muted',
+  ASSIGNED: 'brand', IN_PROGRESS: 'info', COMPLETED: 'success', BLOCKED: 'warning', INFEASIBLE: 'danger',
+  OPEN: 'neutral', INVESTIGATING: 'info', AWAITING_APPROVAL: 'fuchsia', RESOLVED: 'success', AUTO_RESOLVED: 'success', NO_ACTION_NEEDED: 'success',
+  ESCALATED: 'orange', HELD_AND_ESCALATED: 'orange', FAILED: 'danger', CLOSED: 'muted',
+  APPROVED: 'success', EXECUTED: 'success', EXECUTING: 'info', REJECTED: 'danger', EXPIRED: 'muted',
+  AVAILABLE: 'success', UNAVAILABLE: 'danger', ACTIVE: 'brand', SUPERSEDED: 'muted',
+  PROCESSED: 'success', SKIPPED: 'muted', PASS: 'success', PARTIAL: 'warning', FAIL: 'danger',
+  REQUEST_APPROVAL: 'fuchsia', ESCALATE: 'orange', AUTO_ACTION: 'success',
+  LABEL_CREATED: 'neutral', PICKED_UP: 'info', IN_TRANSIT: 'info', DELIVERED: 'success',
+  COLD: 'info', BULKY: 'violet', STANDARD: 'neutral',
+};
+export const toneOf = (v: string) => STATUS_TONE[v] ?? 'neutral';
+
+export function Badge({ v, title, tone, dot = false, className = '' }: { v: string | null | undefined; title?: string; tone?: Tone; dot?: boolean; className?: string }) {
   if (!v) return <span className="text-slate-400">—</span>;
+  const t = tone ?? toneOf(v);
   return (
-    <span title={title} className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset whitespace-nowrap ${TONES[v] ?? 'bg-slate-100 text-slate-700 ring-slate-300'}`}>
+    <span title={title} className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset whitespace-nowrap ${TONE_CLASS[t]} ${v === 'CANCELLED' ? 'line-through' : ''} ${className}`}>
+      {dot && <span className={`h-1.5 w-1.5 rounded-full ${DOT[t]}`} aria-hidden />}
       {v.replace(/_/g, ' ')}
     </span>
   );
 }
+export const StatusBadge = Badge;
 
-export function Card({ title, actions, children, className = '' }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+/** Neutral chip for ids / codes (SKU, location, policy id…). */
+export function Chip({ children, tone = 'neutral', mono = true, title }: { children: ReactNode; tone?: Tone; mono?: boolean; title?: string }) {
+  return <span title={title} className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${TONE_CLASS[tone]} ${mono ? 'font-mono' : ''}`}>{children}</span>;
+}
+
+// ------------------------------------------------------------------ cards
+const ICON_TILE: Record<string, string> = {
+  slate: 'bg-slate-100 text-slate-600', teal: 'bg-teal-50 text-teal-700', emerald: 'bg-emerald-50 text-emerald-600', sky: 'bg-sky-50 text-sky-600',
+  amber: 'bg-amber-50 text-amber-600', orange: 'bg-orange-50 text-orange-600', rose: 'bg-rose-50 text-rose-600', violet: 'bg-violet-50 text-violet-600', fuchsia: 'bg-fuchsia-50 text-fuchsia-600',
+};
+const VALUE_COLOR: Record<string, string> = {
+  slate: 'text-navy', teal: 'text-teal-800', emerald: 'text-emerald-700', sky: 'text-sky-700', amber: 'text-amber-700',
+  orange: 'text-orange-700', rose: 'text-rose-700', violet: 'text-violet-700', fuchsia: 'text-fuchsia-700',
+};
+
+export function SectionCard({ title, icon: I, subtitle, actions, children, className = '', bodyClassName = 'p-5', id }: {
+  title?: ReactNode; icon?: Icon; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClassName?: string; id?: string;
+}) {
+  const hid = useId();
   return (
-    <section className={`card ${className}`}>
+    <section className={`card ${className}`} aria-labelledby={title ? hid : undefined} id={id}>
       {(title || actions) && (
-        <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
-          <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {I && <I className="h-[18px] w-[18px] shrink-0 text-teal-700" aria-hidden />}
+            <div className="min-w-0">
+              <h2 id={hid} className="text-[15px] font-semibold leading-tight text-navy">{title}</h2>
+              {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">{actions}</div>
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div className={bodyClassName}>{children}</div>
     </section>
   );
 }
 
-export function Stat({ label, value, tone = 'slate', hint }: { label: string; value: ReactNode; tone?: string; hint?: string }) {
-  const color: Record<string, string> = { slate: 'text-slate-800', amber: 'text-amber-700', rose: 'text-rose-700', teal: 'text-teal-700', emerald: 'text-emerald-700', fuchsia: 'text-fuchsia-700', orange: 'text-orange-700' };
+/** Backwards-compatible alias used by existing pages. */
+export function Card({ title, actions, children, className = '' }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return <SectionCard title={title} actions={actions} className={className}>{children}</SectionCard>;
+}
+
+export function StatCard({ icon: I, label, value, hint, tone = 'slate', active = false, title }: {
+  icon?: Icon; label: string; value: ReactNode; hint?: ReactNode; tone?: string; active?: boolean; title?: string;
+}) {
   return (
-    <div className="card px-4 py-3">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${color[tone]}`}>{value}</div>
-      {hint && <div className="text-xs text-slate-400">{hint}</div>}
+    <div className={`card flex items-center gap-3.5 px-4 py-3.5 ${active ? 'ring-2 ring-teal-600/30' : ''}`} title={title}>
+      {I && <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${ICON_TILE[tone] ?? ICON_TILE.slate}`}><I className="h-5 w-5" aria-hidden /></div>}
+      <div className="min-w-0">
+        <div className={`text-2xl font-bold leading-tight tabular-nums ${VALUE_COLOR[tone] ?? VALUE_COLOR.slate}`}>{value}</div>
+        <div className="truncate text-[13px] font-medium text-slate-600">{label}</div>
+        {hint && <div className="truncate text-xs text-slate-400">{hint}</div>}
+      </div>
     </div>
   );
 }
 
-export function ErrorBox({ msg }: { msg: string | null | undefined }) {
+/** Backwards-compatible alias. */
+export function Stat({ label, value, tone = 'slate', hint }: { label: string; value: ReactNode; tone?: string; hint?: string }) {
+  return <StatCard label={label} value={value} tone={tone} hint={hint} />;
+}
+
+// ------------------------------------------------------------------ page header
+export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside }: {
+  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode;
+}) {
+  return (
+    <div className="relative mb-5 overflow-hidden rounded-2xl">
+      {illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
+      <div className="relative flex flex-wrap items-end justify-between gap-4 py-1">
+        <div className="min-w-0 max-w-3xl">
+          {crumb && (
+            <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-teal-800">
+              {I && <I className="h-4 w-4" aria-hidden />}{crumb}
+            </div>
+          )}
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-navy md:text-[32px]">{title}</h1>
+          {subtitle && <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
+        </div>
+        <div className="relative flex flex-wrap items-center gap-2">{aside}{actions}</div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ states
+export function EmptyState({ illustration = 'empty', title, children, action, compact = false }: { illustration?: IllustrationKind; title: string; children?: ReactNode; action?: ReactNode; compact?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center text-center ${compact ? 'py-6' : 'py-10'}`} role="status">
+      <Illustration kind={illustration} className={compact ? 'h-16 w-24' : 'h-24 w-36'} />
+      <h3 className="mt-3 text-[15px] font-semibold text-navy">{title}</h3>
+      {children && <div className="mt-1 max-w-md text-sm text-slate-500">{children}</div>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+/** Backwards-compatible simple empty line. */
+export function Empty({ children }: { children: ReactNode }) {
+  return <div className="py-8 text-center text-sm text-slate-400" role="status">{children}</div>;
+}
+
+export function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return <Loader2 className={`animate-spin ${className}`} aria-hidden />;
+}
+
+/** Shown while a real request is in flight. */
+export function LoadingState({ label, rows = 4 }: { label: string; rows?: number }) {
+  return (
+    <div className="space-y-3 py-2" role="status" aria-live="polite">
+      <div className="flex items-center gap-2 text-sm font-medium text-teal-800"><Spinner />{label}</div>
+      {Array.from({ length: rows }).map((_, i) => <div key={i} className="skeleton h-9" style={{ opacity: 1 - i * 0.18 }} />)}
+    </div>
+  );
+}
+
+/** Inline progress for a long-running operation (investigation, planning, scenario…). */
+export function ProgressNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/70 px-3.5 py-2.5 text-sm font-medium text-teal-900" role="status" aria-live="polite">
+      <Spinner className="h-4 w-4 text-teal-700" />{children}
+    </div>
+  );
+}
+
+/**
+ * Error presentation: what failed + the server's message + what to do next. Never hides the
+ * error and never implies success.
+ */
+export function ErrorBox({ msg, operation }: { msg: string | null | undefined; operation?: string }) {
   if (!msg) return null;
-  return <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</div>;
+  return (
+    <div className="flex gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm" role="alert">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
+      <div className="min-w-0">
+        <div className="font-semibold text-rose-800">{operation ? `${operation} failed` : 'The last operation failed'}</div>
+        <div className="mt-0.5 break-words text-rose-700">{msg}</div>
+        <div className="mt-1 text-xs text-rose-600/90">No success was recorded for this request. Check the Audit Log to confirm what, if anything, changed, then retry.</div>
+      </div>
+    </div>
+  );
+}
+
+export function Callout({ tone = 'info', title, children, icon: I = Info }: { tone?: 'info' | 'warning' | 'brand'; title?: ReactNode; children: ReactNode; icon?: Icon }) {
+  const c = tone === 'warning' ? 'border-amber-200 bg-amber-50/70 text-amber-900' : tone === 'brand' ? 'border-teal-200 bg-teal-50/60 text-teal-900' : 'border-sky-200 bg-sky-50/70 text-sky-900';
+  return (
+    <div className={`flex gap-3 rounded-xl border px-4 py-3 text-sm ${c}`}>
+      <I className="mt-0.5 h-4 w-4 shrink-0 opacity-80" aria-hidden />
+      <div className="min-w-0">{title && <div className="font-semibold">{title}</div>}<div className={title ? 'mt-0.5 opacity-90' : ''}>{children}</div></div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ controls
+export function SearchInput({ value, onChange, placeholder, label, className = '' }: { value: string; onChange: (v: string) => void; placeholder: string; label?: string; className?: string }) {
+  return (
+    <label className={`relative block ${className}`}>
+      <span className="sr-only">{label ?? placeholder}</span>
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+      <input type="search" className="input w-full pl-9" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
+
+export function Select({ value, onChange, options, label, className = '', disabled, hideLabel = true }: {
+  value: string; onChange: (v: string) => void; options: Array<{ value: string; label: string; disabled?: boolean }>; label: string; className?: string; disabled?: boolean; hideLabel?: boolean;
+}) {
+  return (
+    <label className={`relative block ${className}`}>
+      <span className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-slate-500'}>{label}</span>
+      <select className="input w-full appearance-none pr-8" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
+      </select>
+      <ChevronDown className={`pointer-events-none absolute right-2.5 h-4 w-4 text-slate-400 ${hideLabel ? 'top-1/2 -translate-y-1/2' : 'bottom-2.5'}`} aria-hidden />
+    </label>
+  );
+}
+
+export function Tabs<T extends string>({ value, onChange, tabs, className = '' }: { value: T; onChange: (v: T) => void; tabs: Array<{ value: T; label: ReactNode; icon?: Icon; count?: number }>; className?: string }) {
+  return (
+    <div role="tablist" className={`flex flex-wrap gap-1 border-b border-line ${className}`}>
+      {tabs.map((t) => {
+        const on = t.value === value;
+        const I = t.icon;
+        return (
+          <button key={t.value} role="tab" aria-selected={on} onClick={() => onChange(t.value)}
+            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-sm font-semibold transition ${on ? 'border-teal-700 text-teal-800' : 'border-transparent text-slate-500 hover:text-navy'}`}>
+            {I && <I className="h-4 w-4" aria-hidden />}{t.label}
+            {t.count !== undefined && <span className={`rounded-full px-1.5 text-[11px] ${on ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-500'}`}>{t.count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: string; icon?: Icon }>; label: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg border border-line bg-white p-0.5 shadow-sm">
+      {options.map((o) => {
+        const I = o.icon;
+        return (
+          <button key={o.value} role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition ${o.value === value ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-200' : 'text-slate-500 hover:text-navy'}`}>
+            {I && <I className="h-4 w-4" aria-hidden />}{o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Toggle({ checked, onChange, disabled, label }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-teal-600' : 'bg-slate-300'}`}>
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  );
+}
+
+/** Client-side pagination over an already-fetched list (presentation only). */
+export function usePaged<T>(rows: T[], pageSize = 25) {
+  const [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const p = Math.min(page, pages);
+  return { page: p, pages, setPage, slice: rows.slice((p - 1) * pageSize, p * pageSize), total: rows.length, from: rows.length ? (p - 1) * pageSize + 1 : 0, to: Math.min(p * pageSize, rows.length) };
+}
+
+export function Pagination({ page, pages, setPage, from, to, total, noun }: { page: number; pages: number; setPage: (n: number) => void; from: number; to: number; total: number; noun: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm text-slate-500">
+      <span>Showing {from}–{to} of {total} {noun}</span>
+      <div className="flex items-center gap-1">
+        <button className="btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></button>
+        <span className="min-w-16 text-center font-medium text-navy">{page} / {pages}</span>
+        <button className="btn-secondary btn-sm" disabled={page >= pages} onClick={() => setPage(page + 1)} aria-label="Next page"><ChevronRight className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
 }
 
 export function Json({ value, collapsed = true, label = 'details' }: { value: unknown; collapsed?: boolean; label?: string }) {
@@ -84,27 +302,25 @@ export function Json({ value, collapsed = true, label = 'details' }: { value: un
   if (value === null || value === undefined) return <span className="text-slate-400">—</span>;
   return (
     <div>
-      <button className="text-xs text-teal-700 hover:underline" onClick={() => setOpen(!open)}>{open ? `hide ${label}` : `show ${label}`}</button>
-      {open && <pre className="mono mt-1 max-h-80 overflow-auto rounded bg-slate-900 p-2 text-slate-100">{JSON.stringify(value, null, 2)}</pre>}
+      <button className="text-xs font-medium text-teal-700 hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? `Hide ${label}` : `Show ${label}`}</button>
+      {open && <pre className="mono mt-1.5 max-h-80 overflow-auto rounded-lg bg-slate-900 p-3 text-slate-100">{JSON.stringify(value, null, 2)}</pre>}
+    </div>
+  );
+}
+
+/** Horizontal meter for a real ratio (e.g. available/on_hand, planned/capacity). */
+export function Meter({ value, max, tone = 'teal', label }: { value: number; max: number; tone?: 'teal' | 'amber' | 'rose' | 'sky'; label: string }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  const c = { teal: 'bg-teal-600', amber: 'bg-amber-500', rose: 'bg-rose-500', sky: 'bg-sky-500' }[tone];
+  return (
+    <div className="flex items-center gap-2" title={label}>
+      <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-100" role="meter" aria-label={label} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+        <div className={`h-full rounded-full ${c}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-9 text-right text-[11px] font-semibold tabular-nums text-slate-500">{Math.round(pct)}%</span>
     </div>
   );
 }
 
 export const hhmm = (iso?: string | null) => (iso ? iso.slice(11, 16) : '—');
 export const dayhhmm = (iso?: string | null) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}` : '—');
-
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="py-6 text-center text-sm text-slate-400">{children}</div>;
-}
-
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
-  return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-0.5 max-w-3xl text-sm text-slate-500">{subtitle}</p>}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">{actions}</div>
-    </div>
-  );
-}
