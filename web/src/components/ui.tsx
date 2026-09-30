@@ -42,11 +42,11 @@ const STATUS_TONE: Record<string, Tone> = {
 };
 export const toneOf = (v: string) => STATUS_TONE[v] ?? 'neutral';
 
-export function Badge({ v, title, tone, dot = false, className = '' }: { v: string | null | undefined; title?: string; tone?: Tone; dot?: boolean; className?: string }) {
+export function Badge({ v, title, tone, dot = false, className = '', wrap = false }: { v: string | null | undefined; title?: string; tone?: Tone; dot?: boolean; className?: string; wrap?: boolean }) {
   if (!v) return <span className="text-slate-400">—</span>;
   const t = tone ?? toneOf(v);
   return (
-    <span title={title} className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset whitespace-nowrap ${TONE_CLASS[t]} ${v === 'CANCELLED' ? 'line-through' : ''} ${className}`}>
+    <span title={title} className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${wrap ? 'text-left leading-tight' : 'whitespace-nowrap'} ${TONE_CLASS[t]} ${v === 'CANCELLED' ? 'line-through' : ''} ${className}`}>
       {dot && <span className={`h-1.5 w-1.5 rounded-full ${DOT[t]}`} aria-hidden />}
       {v.replace(/_/g, ' ')}
     </span>
@@ -56,7 +56,7 @@ export const StatusBadge = Badge;
 
 /** Neutral chip for ids / codes (SKU, location, policy id…). */
 export function Chip({ children, tone = 'neutral', mono = true, title }: { children: ReactNode; tone?: Tone; mono?: boolean; title?: string }) {
-  return <span title={title} className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${TONE_CLASS[tone]} ${mono ? 'font-mono' : ''}`}>{children}</span>;
+  return <span title={title} className={`inline-flex items-center whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${TONE_CLASS[tone]} ${mono ? 'font-mono' : ''}`}>{children}</span>;
 }
 
 // ------------------------------------------------------------------ cards
