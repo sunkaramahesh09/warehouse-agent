@@ -17,6 +17,8 @@ Every failure below has an explicit state, a safe recovery, no false success, an
 | F11 | **Policy gap**: no applicable SOP retrieved | `search_policies` returns `policy_gap: true`. The guard requires the governing policy to be retrieved | Escalate, no action | Add or fix the SOP | `DECISION` | guard unit test |
 | F12 | **Concurrent writers** (two operators, reset during a run) | Serialised mutating HTTP requests. Row locks (`FOR UPDATE`). `LOCK TABLE plans`. Reset under an advisory lock | Requests queue instead of interleaving | — | — | design |
 | F13 | **Crash mid-investigation** | try/catch around the run body | Exception set to `FAILED` (not stuck in INVESTIGATING), run FAILED | Re-run | `RUN_COMPLETED` (FAILED) | code path |
+| F14 | **Automation loop / duplicate replans** (an event triggers work that emits more events) | Dispatcher rounds are bounded (6). Replan events are coalesced per round, and any plan generation absorbs pending state-change events. Detector is idempotent per count | Every event PROCESSED / SKIPPED (reason) / FAILED | Automation switches can be turned off; events are then SKIPPED, never silently dropped | `EVENT_PROCESSED`, `AUTO_REPLAN` | `event-driven` |
+| F15 | **Automation overreach** (auto-investigation proposes an irreversible action) | Automation calls the same guarded resolver; approval tools are Operator-only | Proposal waits as AWAITING_APPROVAL | Operator decides | `APPROVAL_REQUESTED` | `event-driven` (0 approvals executed) |
 
 ## Principles applied
 

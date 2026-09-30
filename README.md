@@ -20,6 +20,7 @@ A small, controlled, observable warehouse-operations prototype. Two cooperating 
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | 13 failure modes, explicit states, recovery, evidence |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 8–12 minute live demo steps |
 | [docs/REFLECTION.md](docs/REFLECTION.md) | Design decisions, **AI assistance disclosure**, changes from Phase 0, debugging lesson, risks, next steps |
+| [docs/OPTIONAL_FEATURES.md](docs/OPTIONAL_FEATURES.md) | Event-driven automation, metrics + evaluation harness, local-search optimizer |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operations + progress log / resume guide |
 | [docs/results/](docs/results/) | Scenario results (deterministic and Gemini) and audit-log examples (JSONL + table) |
 
@@ -94,17 +95,26 @@ npm run dev:web                 # http://localhost:5173 (proxies /api)
 ## Tests and scenario runner
 
 ```bash
-npm test                              # 50 tests: planner/rules/guard unit tests + all scenarios against Postgres
-npm run scenario -- all               # 18 named scenarios, expected vs actual → docs/results/scenario-results.md
+npm test                              # 54 tests: planner/rules/guard unit tests + all scenarios against Postgres
+npm run scenario -- all               # 20 named scenarios, expected vs actual → docs/results/scenario-results.md
 npm run scenario -- cross-agent       # one scenario (ids: see docs/SCENARIOS.md)
 npm run scenario -- all --llm         # drive the resolver with Gemini → docs/results/scenario-results-llm.md
+npm run eval                          # repeated-run resolver evaluation → docs/results/eval-report.md (add -- --llm for Gemini)
 npm run demo:trace                    # demo storyline → docs/results/audit-log-example.{jsonl,md}
 npm run typecheck
 ```
 
-Current results: **18/18 scenarios pass** with the deterministic agent and **18/18 with Gemini** (every resolver run LLM-driven, no fallback). **50/50 tests** pass.
+Current results: **20/20 scenarios** (deterministic) · **54/54 tests** · evaluation: 100% accuracy / 0 unsafe actions (see `docs/results/`).
 
-Scenario ids: `inventory-shortfall`, `duplicate-order`, `shipment-desync`, `shipment-desync-contradictory`, `invalid-data`, `stale-shipment`, `destination-conflict`, `planning-cycle`, `replanning`, `urgent-order`, `cross-agent`, `tool-timeout`, `missing-record`, `duplicate-action`, `approval-expiry`, `inventory-drift`, `planner-failure`, `unsafe-llm-proposal`.
+Scenario ids: `inventory-shortfall`, `duplicate-order`, `shipment-desync`, `shipment-desync-contradictory`, `invalid-data`, `stale-shipment`, `destination-conflict`, `planning-cycle`, `replanning`, `urgent-order`, `cross-agent`, `tool-timeout`, `missing-record`, `duplicate-action`, `approval-expiry`, `inventory-drift`, `planner-failure`, `unsafe-llm-proposal`, `event-driven`, `optimizer`.
+
+## Optional features (beyond MUST)
+
+- **Event-driven automation:** a transactional outbox of domain events. Cycle-count ingestion → deterministic shortfall detector → optional auto-investigation → one coalesced auto-replan. Operator switches are on the *Events & Automation* page. Automation never approves anything.
+- **Metrics & evaluation:** a live dashboard (correct-outcome rate, escalation recall/precision, **unsafe-action count**, LLM agreement/override/fallback, plan feasibility, preservation on replan, optimizer gains) plus a repeated-run evaluation harness with persistent history.
+- **Advanced scheduling:** an opt-in local search (relocate/swap) over the greedy plan with a lexicographic objective (SLA risk → lateness → churn → makespan). It is constraint-safe and deterministic, and every move is explained (baseline makespan 109 → 85 min).
+
+Details and design rationale: [docs/OPTIONAL_FEATURES.md](docs/OPTIONAL_FEATURES.md).
 
 ## Deployment (Railway)
 

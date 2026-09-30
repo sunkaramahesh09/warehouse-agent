@@ -100,10 +100,19 @@ There is exactly one set of tables. The resolver writes `orders.status = ON_HOLD
 - **Infeasible ≠ error.** Infeasible orders are part of a `COMPLETED` plan. An exception or timeout in `generate_plan` makes the run `FAILED` with `kind: SYSTEM_FAILURE`, and the active plan is unchanged.
 - **Execution simulation.** `advance_clock(minutes)` lets available pickers work through their queue. It dispatches with an inventory re-check, applies progress, completes orders, decrements stock, and expires approvals.
 
+## Event-driven automation (optional feature)
+
+State-changing tools write a row to `domain_events` **in the same transaction** as the change (outbox). After each HTTP mutation the dispatcher drains the outbox in rounds: cycle count → deterministic detector → `EXCEPTION_DETECTED` → (optional) auto-investigation → hold events → **one** coalesced incremental replan. Any plan generation absorbs pending state-change events, so replans are never duplicated. Each event ends PROCESSED, SKIPPED or FAILED and is audited. See [OPTIONAL_FEATURES.md](OPTIONAL_FEATURES.md).
+
+## Planner strategies
+
+`buildPlan()` = eligibility gates → priority sort → greedy picker choice → *(optional)* local-search improvement (`optimizer.ts`) → **finalize** (sequence, timings, SLA flags, rationale from the final queues) → diff vs the previous version. The strategy defaults to SOP-PLN-002 `default_strategy` and can be overridden per run.
+
 ## Observability
 
 - `audit_events`: sequence-ordered, every tool call and decision, with sanitized input (secret-looking keys are redacted, and payload sizes are bounded). It can be exported as JSONL (`/api/audit/export.jsonl`).
 - `agent_runs`: one row per resolver or planner run, holding the full structured report (steps, evidence, citations, guard notes, actions, final state).
+- `/api/metrics` computes structured metrics (unsafe-action count, escalation precision/recall, LLM agreement, plan feasibility, preservation…). `eval_results` stores repeated-run evaluations (survives reset).
 - The UI shows all of the above. The Audit page filters by run id, workflow, and event type.
 
 ## Technology choices

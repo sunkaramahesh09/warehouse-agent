@@ -24,7 +24,7 @@ export interface PlannerReport {
   explanation: string;
 }
 
-export async function runPlanner(trigger: PlanTrigger, opts: { detail?: string; actor?: string; explain?: boolean } = {}): Promise<PlannerReport> {
+export async function runPlanner(trigger: PlanTrigger, opts: { detail?: string; actor?: string; explain?: boolean; strategy?: 'greedy' | 'local_search' } = {}): Promise<PlannerReport> {
   const actor = opts.actor ?? 'shift-planner';
   const provider = opts.explain === false ? null : getProvider();
   const runId = newRunId('PLN');
@@ -40,7 +40,7 @@ export async function runPlanner(trigger: PlanTrigger, opts: { detail?: string; 
   steps.push({ tool: 'search_policies', ok: pol.success, summary: pol.success ? `hits: ${pol.data.hits.map((h: any) => h.policy_id).join(', ')}` : pol.error.code });
   const policies = pol.success ? pol.data.hits.map((h: any) => ({ policy_id: h.policy_id, title: h.title, excerpt: h.excerpt })) : [];
 
-  const gen = await callTool<any>('generate_plan', { trigger, trigger_detail: opts.detail, run_id: runId }, ctx);
+  const gen = await callTool<any>('generate_plan', { trigger, trigger_detail: opts.detail, run_id: runId, strategy: opts.strategy }, ctx);
   steps.push({ tool: 'generate_plan', ok: gen.success, summary: gen.success ? `plan v${gen.data.version}: ${gen.data.summary.assigned} assigned, ${gen.data.summary.blocked} blocked, ${gen.data.summary.infeasible} infeasible` : `${gen.error.code}: ${gen.error.message}` });
 
   if (!gen.success) {
@@ -94,5 +94,7 @@ export function templateExplanation(plan: any): string {
     for (const c of plan.change_log) lines.push(`• ${c.order_id} ${c.change_type}: ${c.from} → ${c.to}. ${c.reason}`);
   }
   if (plan.metrics) lines.push(`${plan.metrics.preserved} assignment(s) preserved, ${plan.metrics.changed} changed.`);
+  const opt = plan.summary.optimizer;
+  if (opt) lines.push(`Optimizer (local search, ${opt.moves.length} move(s)): SLA risk ${opt.before.sla_at_risk}→${opt.after.sla_at_risk}, lateness ${opt.before.lateness_min}→${opt.after.lateness_min} min, makespan ${opt.before.makespan_min}→${opt.after.makespan_min} min.`);
   return lines.join('\n');
 }

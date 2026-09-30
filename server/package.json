@@ -9,7 +9,8 @@
     "scenario": "tsx --env-file-if-exists=../.env scripts/scenario-runner.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "demo:trace": "tsx --env-file-if-exists=../.env scripts/demo-trace.ts"
+    "demo:trace": "tsx --env-file-if-exists=../.env scripts/demo-trace.ts",
+    "eval": "tsx --env-file-if-exists=../.env scripts/eval.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.5",

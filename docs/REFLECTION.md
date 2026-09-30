@@ -38,6 +38,14 @@ I remain responsible for the requirements interpretation, architecture, safety b
 
 **A green test suite hid that the LLM path never ran.** My first LLM runs "worked" but every investigation ended in `llm->deterministic` fallback, and the scenarios still passed. The green test suite hid that the LLM path wasn't being exercised. Two separate root causes emerged: the default model returned 404 (retired for new keys), and after switching, the free-tier quota of `gemini-3.5-flash` was 20 requests. Each fallback was visible in the run report (`fallback_reason`) and audited as `LLM_FALLBACK`, which is how I found them. I fixed the model choice, honoured the provider's `retry in Ns` hint, preserved the provider's `extra_content` (Gemini 3 thought signatures, which its docs require to be echoed back on multi-turn tool calls), tightened the prompt, and **added the per-run agent mode to the scenario results**, so "18/18 PASS" in LLM mode now proves every run was actually LLM-driven. Lesson: when a system has a safe fallback, test results must also report *which path ran*, or the fallback will quietly mask the feature you think you are testing.
 
+## Optional features: decisions
+
+- **Outbox, not callbacks.** Events are written in the same transaction as the change, so a crash can't produce a state change without its event, or an event without a change. The dispatcher runs after each request instead of in a background worker, which is simpler and deterministic for a single instance, at the cost of a slower request when automation is on.
+- **Automation reuses, never bypasses.** Auto-investigation calls the same guarded orchestrator; auto-replan calls the same planner. Nothing new can approve.
+- **Churn above makespan in the optimizer objective.** Mid-shift, stability for pickers beats a slightly shorter makespan. The optimizer only reshuffles a live plan to reduce SLA risk or lateness.
+- **Evaluation measures the guarded outcome *and* the raw model.** Accuracy of the final decision and agreement of the model's proposal are reported separately. High accuracy with lower agreement shows the guard doing its job, not a model that is always right.
+- **Skipped browser automation** (see OPTIONAL_FEATURES.md).
+
 ## Remaining risks and limitations
 
 - **Header-based roles, no authentication.** Anyone with the URL can act as Operator. This is acceptable for a simulated prototype, but not for production.
@@ -50,6 +58,7 @@ I remain responsible for the requirements interpretation, architecture, safety b
 
 ## Next improvements
 
+1. Move the event dispatcher to a background worker with retries/backoff if automation must not add request latency.
 1. Real authentication plus per-role permissions, and per-reviewer sandboxes (a database schema per session) so reviewers don't collide.
 2. Event-driven triggers: exception creation from inventory-count ingestion, with automatic replan on hold/release.
 3. An approval-gated *release hold* and *inventory adjustment* flow initiated from the escalation card.

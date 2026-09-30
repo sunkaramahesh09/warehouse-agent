@@ -230,7 +230,7 @@
   {
     "policy_id": "SOP-PLN-002",
     "title": "Capacity, skills and inventory constraints",
-    "rule": "Work may only be assigned to AVAILABLE pickers who hold every skill the order's SKUs require. A picker's assigned workload may never exceed capacity_minutes. Orders are not split across pickers. Workload is remaining units times pick minutes per unit, plus 2 minutes per distinct location and 3 minutes per additional zone. Among feasible pickers prefer one who finishes before the deadline, then the earliest finish, then the nearest zone. If a picker has capacity but no picker can meet the deadline, assign and flag SLA risk. If no picker has capacity or skill, mark the order INFEASIBLE with the reason. Inventory is re-checked when an assignment is dispatched.",
+    "rule": "Work may only be assigned to AVAILABLE pickers who hold every skill the order's SKUs require. A picker's assigned workload may never exceed capacity_minutes. Orders are not split across pickers. Workload is remaining units times pick minutes per unit, plus 2 minutes per distinct location and 3 minutes per additional zone. Among feasible pickers prefer one who finishes before the deadline, then the earliest finish, then the nearest zone. If a picker has capacity but no picker can meet the deadline, assign and flag SLA risk. If no picker has capacity or skill, mark the order INFEASIBLE with the reason. Inventory is re-checked when an assignment is dispatched. The default strategy is greedy assignment in priority order; an operator may request an optional local-search improvement pass that may only move un-started work, must keep every hard constraint, and must reduce (lexicographically) SLA-risk orders, total lateness, reassignment churn, then makespan.",
     "applies_to": [
       "shift_planner",
       "exception_resolver"
@@ -247,11 +247,16 @@
       "infeasible",
       "location",
       "zone",
-      "proximity"
+      "proximity",
+      "optimizer",
+      "local search",
+      "strategy",
+      "makespan"
     ],
     "params": {
       "minutes_per_location": 2,
-      "minutes_per_extra_zone": 3
+      "minutes_per_extra_zone": 3,
+      "default_strategy": "greedy"
     }
   },
   {

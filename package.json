@@ -21,6 +21,7 @@
     "scenario": "npm run scenario -w server --",
     "test": "npm run test -w server",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
-    "demo:trace": "npm run demo:trace -w server --"
+    "demo:trace": "npm run demo:trace -w server --",
+    "eval": "npm run eval -w server --"
   }
 }

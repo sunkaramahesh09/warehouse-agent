@@ -12,6 +12,7 @@ import { one } from '../db/pool.js';
 import { isForward, shipmentFacts, transitionAllowed } from '../domain/rules.js';
 import type { Order, OrderStatus } from '../domain/types.js';
 import { getPolicy } from '../policy/retrieval.js';
+import { emit } from '../events/emit.js';
 
 const OrderId = z.string().regex(/^ORD-\d{4}$/);
 const ExcId = z.string().regex(/^EXC-\d{4}$/);
@@ -45,7 +46,7 @@ export const holdOrder = defineTool({
   roles: ['agent', 'operator', 'system'],
   input: z.object({ order_id: OrderId, exception_id: ExcId, reason: z.string().min(5).max(300), policy_id: PolicyId }),
   idempotencyKey: (i) => `hold:${i.order_id}:${i.exception_id}`,
-  run: async (c, i, _ctx, note) => {
+  run: async (c, i, ctx, note) => {
     const auth = await authority(c);
     if (!auth.autonomous.includes('HOLD_ORDER')) throw new ToolError('NOT_PERMITTED', 'HOLD_ORDER is not an autonomous action under SOP-APR-001');
     await requirePolicies(c, [i.policy_id]);
@@ -67,6 +68,7 @@ export const holdOrder = defineTool({
     note.event_type = 'STATE_CHANGE';
     note.decision_summary = `Order ${o.order_id} placed ON_HOLD: ${i.reason}`;
     note.state_changes = [{ entity: 'order', id: o.order_id, field: 'status', from: o.status, to: 'ON_HOLD' }];
+    await emit(c, 'ORDER_HELD', { order_id: o.order_id, exception_id: i.exception_id, previous_status: o.status }, 'hold_order', ctx);
     return { order_id: o.order_id, previous_status: o.status, status: 'ON_HOLD', hold_exception_id: i.exception_id };
   },
 });
@@ -79,7 +81,7 @@ export const syncOrderStatus = defineTool({
   roles: ['agent', 'system'],
   input: z.object({ order_id: OrderId, shipment_id: z.string().regex(/^SHP-\d{4}$/), to_status: z.literal('SHIPPED'), exception_id: ExcId, policy_id: PolicyId }),
   idempotencyKey: (i) => `sync:${i.order_id}:${i.to_status}:${i.exception_id}`,
-  run: async (c, i, _ctx, note) => {
+  run: async (c, i, ctx, note) => {
     const auth = await authority(c);
     if (!auth.autonomous.includes('SYNC_ORDER_STATUS_FORWARD')) throw new ToolError('NOT_PERMITTED', 'Forward sync not autonomous under SOP-APR-001');
     await requirePolicies(c, [i.policy_id]);
@@ -104,6 +106,7 @@ export const syncOrderStatus = defineTool({
     note.policy_refs = [i.policy_id, 'SOP-APR-001'];
     note.decision_summary = `Order ${o.order_id} synced ${o.status} -> ${i.to_status} from carrier evidence on ${s.shipment_id}`;
     note.state_changes = [{ entity: 'order', id: o.order_id, field: 'status', from: o.status, to: i.to_status }];
+    await emit(c, 'ORDER_STATUS_SYNCED', { order_id: o.order_id, from: o.status, to: i.to_status }, 'sync_order_status', ctx);
     return { order_id: o.order_id, previous_status: o.status, status: i.to_status, evidence: f };
   },
 });
@@ -206,17 +209,20 @@ export const executeApprovedAction = defineTool({
       if (o.status === 'ON_HOLD' && o.hold_prev_status !== 'PENDING') throw new ToolError('RULE_VIOLATION', `Order was ${o.hold_prev_status} before hold; only unstarted orders may be cancelled`);
       await c.query(`UPDATE orders SET status = 'CANCELLED', hold_prev_status = NULL, hold_reason = NULL, updated_at = $2 WHERE order_id = $1`, [o.order_id, sim_now]);
       changes.push({ entity: 'order', id: o.order_id, field: 'status', from: o.status, to: 'CANCELLED' });
+      await emit(c, 'ORDER_CANCELLED', { order_id: o.order_id, approval_id: i.approval_id }, 'execute_approved_action', ctx);
     } else if (claimed.action_type === 'RELEASE_HOLD') {
       const o = await lockOrder(c, p.order_id);
       if (o.status !== 'ON_HOLD') throw new ToolError('INVALID_TRANSITION', `Order ${o.order_id} is not on hold`);
       await c.query(`UPDATE orders SET status = hold_prev_status, hold_prev_status = NULL, hold_reason = NULL, hold_exception_id = NULL, updated_at = $2 WHERE order_id = $1`, [o.order_id, sim_now]);
       changes.push({ entity: 'order', id: o.order_id, field: 'status', from: 'ON_HOLD', to: o.hold_prev_status });
+      await emit(c, 'ORDER_RELEASED', { order_id: o.order_id, approval_id: i.approval_id }, 'execute_approved_action', ctx);
     } else if (claimed.action_type === 'RELINK_SHIPMENT') {
       const s = await repo.getShipmentRow(c, p.shipment_id);
       if (!s) throw new ToolError('NOT_FOUND', `Shipment ${p.shipment_id} does not exist`);
       if (!(await repo.getOrderRow(c, p.to_order_id))) throw new ToolError('NOT_FOUND', `Order ${p.to_order_id} does not exist`);
       await c.query('UPDATE shipments SET order_id = $2 WHERE shipment_id = $1', [s.shipment_id, p.to_order_id]);
       changes.push({ entity: 'shipment', id: s.shipment_id, field: 'order_id', from: s.order_id, to: p.to_order_id });
+      await emit(c, 'SHIPMENT_RELINKED', { shipment_id: s.shipment_id, from: s.order_id, to: p.to_order_id }, 'execute_approved_action', ctx);
     } else {
       throw new ToolError('NOT_IMPLEMENTED', `${claimed.action_type} has no executor in this prototype`);
     }
@@ -318,6 +324,7 @@ export const resolveEscalation = defineTool({
       if (!o || o.status !== 'ON_HOLD') throw new ToolError('INVALID_TRANSITION', `Order ${exc.order_id} is not on hold`);
       await c.query(`UPDATE orders SET status = hold_prev_status, hold_prev_status = NULL, hold_reason = NULL, hold_exception_id = NULL, updated_at = $2 WHERE order_id = $1`, [o.order_id, sim_now]);
       changes.push({ entity: 'order', id: o.order_id, field: 'status', from: 'ON_HOLD', to: o.hold_prev_status as OrderStatus });
+      await emit(c, 'ORDER_RELEASED', { order_id: o.order_id, escalation_id: i.escalation_id }, 'resolve_escalation', ctx);
     }
     await c.query(`UPDATE escalations SET status = 'RESOLVED', resolved_by = $2, resolution_note = $3, resolved_at = now() WHERE escalation_id = $1`, [
       i.escalation_id, ctx.actor, i.resolution_note,
