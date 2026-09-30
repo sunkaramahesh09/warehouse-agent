@@ -78,7 +78,7 @@ export default function App() {
               <a href={`#/${k}`} aria-current={on ? 'page' : undefined}
                 className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${on ? 'bg-teal-50 text-teal-900 ring-1 ring-teal-100' : 'text-slate-600 hover:bg-white hover:text-navy'}`}>
                 <I className={`h-[18px] w-[18px] shrink-0 ${on ? 'text-teal-700' : 'text-slate-400 group-hover:text-slate-600'}`} aria-hidden />
-                <span className="flex-1 truncate">{label}</span>
+                <span className="flex-1 leading-tight">{label}</span>
                 {badge[k] > 0 && <span className="rounded-full bg-rose-500 px-1.5 py-px text-[10px] font-bold text-white" aria-label={`${badge[k]} open`}>{badge[k]}</span>}
               </a>
             </li>
