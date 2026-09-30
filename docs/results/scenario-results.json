@@ -7,7 +7,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 170,
+    "ms": 169,
     "checks": [
       {
         "name": "outcome",
@@ -66,7 +66,7 @@
     "verdict": "PASS",
     "passed": 10,
     "total": 10,
-    "ms": 113,
+    "ms": 111,
     "checks": [
       {
         "name": "outcome",
@@ -143,7 +143,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 99,
+    "ms": 98,
     "checks": [
       {
         "name": "outcome",
@@ -190,7 +190,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 91,
+    "ms": 95,
     "checks": [
       {
         "name": "outcome",
@@ -237,7 +237,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 125,
+    "ms": 116,
     "checks": [
       {
         "name": "outcome",
@@ -284,7 +284,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 88,
+    "ms": 89,
     "checks": [
       {
         "name": "outcome",
@@ -378,7 +378,7 @@
     "verdict": "PASS",
     "passed": 10,
     "total": 10,
-    "ms": 119,
+    "ms": 109,
     "checks": [
       {
         "name": "plan created",
@@ -455,7 +455,7 @@
     "verdict": "PASS",
     "passed": 8,
     "total": 8,
-    "ms": 159,
+    "ms": 147,
     "checks": [
       {
         "name": "v2 created from v1",
@@ -520,7 +520,7 @@
     "verdict": "PASS",
     "passed": 6,
     "total": 6,
-    "ms": 142,
+    "ms": 135,
     "checks": [
       {
         "name": "urgent order assigned",
@@ -626,7 +626,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 121,
+    "ms": 119,
     "checks": [
       {
         "name": "first run outcome",
@@ -685,7 +685,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 90,
+    "ms": 84,
     "checks": [
       {
         "name": "outcome",
@@ -726,7 +726,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 141,
+    "ms": 135,
     "checks": [
       {
         "name": "first hold applied",
@@ -785,7 +785,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 108,
+    "ms": 111,
     "checks": [
       {
         "name": "approval expired",
@@ -826,7 +826,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 143,
+    "ms": 132,
     "checks": [
       {
         "name": "dispatch blocked and audited",
@@ -867,7 +867,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 99,
+    "ms": 96,
     "checks": [
       {
         "name": "run status",
@@ -908,7 +908,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 109,
+    "ms": 102,
     "checks": [
       {
         "name": "fabricated citation rejected",
@@ -955,7 +955,7 @@
     "verdict": "PASS",
     "passed": 11,
     "total": 11,
-    "ms": 195,
+    "ms": 201,
     "checks": [
       {
         "name": "cycle count recorded",
@@ -1024,7 +1024,7 @@
         "pass": true
       }
     ],
-    "notes": null,
+    "notes": "resolver runs: auto-investigate RUN-A15C5EFC:deterministic; auto-investigate RUN-3762441C:deterministic",
     "setup": "Plan v1 active. Automation ON (auto_detect, auto_investigate, auto_replan). SKU-003@B-01: system on_hand 40, reserved 5.",
     "trigger": "Cycle count records only 12 × SKU-003 at B-01 (effective 7). Then automation OFF and a second count.",
     "expected": "Detector raises shortfalls for ORD-1002 (needs 10) and ORD-1016 (needs 8) but not ORD-1009 (5); both are auto-investigated (hold + escalation, never approval); holds are coalesced into ONE replan where both are BLOCKED by their new exceptions. With automation off, events are SKIPPED and no plan is created.",
@@ -1038,7 +1038,7 @@
     "verdict": "PASS",
     "passed": 9,
     "total": 9,
-    "ms": 279,
+    "ms": 271,
     "checks": [
       {
         "name": "optimizer ran",

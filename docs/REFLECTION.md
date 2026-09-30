@@ -46,6 +46,10 @@ I remain responsible for the requirements interpretation, architecture, safety b
 - **Evaluation measures the guarded outcome *and* the raw model.** Accuracy of the final decision and agreement of the model's proposal are reported separately. High accuracy with lower agreement shows the guard doing its job, not a model that is always right.
 - **Skipped browser automation** (see OPTIONAL_FEATURES.md).
 
+### A second instance of the same lesson
+
+While building the optional features, I ran the LLM evaluation, the LLM scenario suite and a live browser test back-to-back on one free-tier key. The suite still reported "20/20 PASS", but its per-run agent-mode line showed **8 runs had fallen back** to deterministic (`429 quota exceeded`, a per-minute limit). Because the results record which path ran, I didn't publish that as LLM evidence. I added client-side request pacing (`LLM_MIN_INTERVAL_MS`, also set on Railway) and reran the suite with the key otherwise idle. The evaluation report also shows its fallback rate honestly (1 of 14 runs).
+
 ## Remaining risks and limitations
 
 - **Header-based roles, no authentication.** Anyone with the URL can act as Operator. This is acceptable for a simulated prototype, but not for production.

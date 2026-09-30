@@ -74,6 +74,7 @@ cp .env.example .env      # then set LLM_API_KEY (optional). Never commit .env.
 | `LLM_MODEL` | `gemini-3.1-flash-lite` | Model id |
 | `LLM_BASE_URL` | Gemini OpenAI-compatible endpoint | Change to use OpenAI/Groq/etc. |
 | `LLM_TIMEOUT_MS` | `30000` | Per-request timeout |
+| `LLM_MIN_INTERVAL_MS` | `0` (4000 on Railway) | Client-side spacing between LLM requests to stay under free-tier RPM limits |
 
 ## Database setup, seed and reset
 
@@ -104,7 +105,7 @@ npm run demo:trace                    # demo storyline → docs/results/audit-lo
 npm run typecheck
 ```
 
-Current results: **20/20 scenarios** (deterministic) · **54/54 tests** · evaluation: 100% accuracy / 0 unsafe actions (see `docs/results/`).
+Current results: **20/20 scenarios** (deterministic) · **18/18 core scenarios with Gemini, all LLM-driven** · **54/54 tests** · evaluation 100% accuracy, 0 unsafe actions in both modes (see `docs/results/`). The free Gemini tier allows 500 requests/day; when that is used up the agent visibly falls back to deterministic mode.
 
 Scenario ids: `inventory-shortfall`, `duplicate-order`, `shipment-desync`, `shipment-desync-contradictory`, `invalid-data`, `stale-shipment`, `destination-conflict`, `planning-cycle`, `replanning`, `urgent-order`, `cross-agent`, `tool-timeout`, `missing-record`, `duplicate-action`, `approval-expiry`, `inventory-drift`, `planner-failure`, `unsafe-llm-proposal`, `event-driven`, `optimizer`.
 

@@ -10,6 +10,8 @@ export const config = {
     // Any OpenAI-compatible chat-completions endpoint (Gemini, OpenAI, Groq, ...).
     baseUrl: process.env.LLM_BASE_URL ?? 'https://generativelanguage.googleapis.com/v1beta/openai',
     timeoutMs: Number(process.env.LLM_TIMEOUT_MS ?? 30000),
+    /** Client-side pacing to stay under provider RPM limits (free tiers). 0 = off. */
+    minIntervalMs: Number(process.env.LLM_MIN_INTERVAL_MS ?? 0),
   },
   toolTimeoutMs: Number(process.env.TOOL_TIMEOUT_MS ?? 5000),
 };
