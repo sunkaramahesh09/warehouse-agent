@@ -18,6 +18,9 @@ import { SCENARIOS, scenarioById, runScenario } from '../scenarios/definitions.j
 import { describeLLM } from '../llm/index.js';
 import { effectiveAvailability } from '../domain/rules.js';
 import * as repo from '../tools/repo.js';
+import { processEvents } from '../events/dispatcher.js';
+import { computeMetrics } from '../metrics/metrics.js';
+import { runEvaluation } from '../eval/harness.js';
 import type { Role } from '../tools/framework.js';
 
 // Serialize state-changing requests: one simulated warehouse, one writer at a time.
@@ -26,6 +29,14 @@ function exclusive<T>(fn: () => Promise<T>): Promise<T> {
   const next = chain.then(fn, fn);
   chain = next.catch(() => {});
   return next;
+}
+/** Serialized state change followed by event dispatch (event-driven automation). */
+function mutate<T>(fn: () => Promise<T>): Promise<T> {
+  return exclusive(async () => {
+    const r = await fn();
+    await processEvents();
+    return r;
+  });
 }
 
 function caller(req: FastifyRequest): { role: Role; actor: string } {
@@ -133,7 +144,7 @@ export async function buildApp() {
     const { id } = req.params as { id: string };
     const body = z.object({ mode: z.enum(['auto', 'llm', 'deterministic']).optional() }).parse(req.body ?? {});
     const { actor } = caller(req);
-    return exclusive(() => investigateException(id, { mode: body.mode, actor: `resolver (started by ${actor})` }));
+    return mutate(() => investigateException(id, { mode: body.mode, actor: `resolver (started by ${actor})` }));
   });
 
   app.get('/api/approvals', async () => many(pool, `SELECT a.*, e.order_id, e.type FROM approvals a JOIN exceptions e USING (exception_id) ORDER BY a.requested_at DESC`));
@@ -143,7 +154,7 @@ export async function buildApp() {
     const body = z.object({ decision: z.enum(['APPROVE', 'REJECT']), note: z.string().max(500).optional() }).parse(req.body);
     const c = caller(req);
     if (c.role !== 'operator') return reply.status(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Only the Operator role may approve or reject proposals' } });
-    const r = await exclusive(() => decideApproval(id, body.decision, c.actor, body.note));
+    const r = await mutate(() => decideApproval(id, body.decision, c.actor, body.note));
     return reply.status((r as any).ok ? 200 : 409).send(r);
   });
 
@@ -151,7 +162,7 @@ export async function buildApp() {
     const { id } = req.params as { id: string };
     const c = caller(req);
     if (c.role !== 'operator') return reply.status(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Only the Operator role may execute approved actions' } });
-    const r = await exclusive(() => executeApproval(id, c.actor));
+    const r = await mutate(() => executeApproval(id, c.actor));
     return reply.status(r.ok ? 200 : 409).send(r);
   });
 
@@ -160,7 +171,7 @@ export async function buildApp() {
   app.post('/api/escalations/:id/resolve', async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = z.object({ resolution_note: z.string().min(5).max(1000), release_hold: z.boolean().default(false) }).parse(req.body);
-    return sendTool(reply, await exclusive(() => callTool('resolve_escalation', { escalation_id: id, ...body }, opCtx(req))));
+    return sendTool(reply, await mutate(() => callTool('resolve_escalation', { escalation_id: id, ...body }, opCtx(req))));
   });
 
   // ------------------------------------------------------------------ planner
@@ -174,9 +185,9 @@ export async function buildApp() {
     return { plan, assignments };
   });
   app.post('/api/planner/run', async (req) => {
-    const body = z.object({ trigger: z.enum(PLAN_TRIGGERS).default('MANUAL_REFRESH'), detail: z.string().max(300).optional() }).parse(req.body ?? {});
+    const body = z.object({ trigger: z.enum(PLAN_TRIGGERS).default('MANUAL_REFRESH'), detail: z.string().max(300).optional(), strategy: z.enum(['greedy', 'local_search']).optional() }).parse(req.body ?? {});
     const { actor } = caller(req);
-    return exclusive(() => runPlanner(body.trigger, { detail: body.detail, actor: `planner (started by ${actor})` }));
+    return mutate(() => runPlanner(body.trigger, { detail: body.detail, actor: `planner (started by ${actor})`, strategy: body.strategy }));
   });
 
   // ------------------------------------------------------------------ simulation controls (operator)
@@ -184,13 +195,30 @@ export async function buildApp() {
     app.post(path, async (req, reply) => {
       const c = caller(req);
       if (c.role !== 'operator') return reply.status(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Simulation controls are Operator-only' } });
-      return sendTool(reply, await exclusive(() => callTool(tool, schema.parse(req.body ?? {}), opCtx(req))));
+      return sendTool(reply, await mutate(() => callTool(tool, schema.parse(req.body ?? {}), opCtx(req))));
     });
   sim('/api/sim/picker', 'set_picker_availability', z.any());
   sim('/api/sim/urgent-order', 'inject_urgent_order', z.any());
   sim('/api/sim/inventory', 'simulate_inventory_change', z.any());
   sim('/api/sim/advance', 'advance_clock', z.any());
   sim('/api/sim/fault', 'inject_fault', z.any());
+  sim('/api/sim/cycle-count', 'record_cycle_count', z.any());
+  sim('/api/automation', 'set_automation', z.any());
+
+  // ------------------------------------------------------------------ events / metrics
+  app.get('/api/events', async () => many(pool, 'SELECT * FROM domain_events ORDER BY event_id DESC LIMIT 300'));
+  app.post('/api/events/process', async (req, reply) => {
+    if (caller(req).role !== 'operator') return reply.status(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Operator only' } });
+    return exclusive(() => processEvents());
+  });
+  app.get('/api/metrics', async () => computeMetrics());
+  app.get('/api/eval', async () => many(pool, 'SELECT * FROM eval_results ORDER BY run_at DESC, id DESC LIMIT 500'));
+  // Deterministic evaluation is fast enough for an HTTP request; LLM evaluation runs via CLI (npm run eval -- --llm).
+  app.post('/api/eval/run', async (req, reply) => {
+    if (caller(req).role !== 'operator') return reply.status(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Operator only (resets the environment)' } });
+    const body = z.object({ repetitions: z.number().int().min(1).max(5).default(3) }).parse(req.body ?? {});
+    return exclusive(() => runEvaluation({ mode: 'deterministic', repetitions: body.repetitions }));
+  });
 
   // ------------------------------------------------------------------ audit / runs
   app.get('/api/audit', async (req) => {

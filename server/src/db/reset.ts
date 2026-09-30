@@ -19,7 +19,7 @@ export async function resetEnvironment(): Promise<{ seedVersion: string; counts:
   return withTx(async (c) => {
     await c.query('SELECT pg_advisory_xact_lock($1)', [RESET_LOCK]);
     const { rows } = await c.query(
-      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'scenario_results'`,
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT IN ('scenario_results', 'eval_results')`,
     );
     if (rows.length) await c.query(`DROP TABLE ${rows.map((r) => `"${r.tablename}"`).join(', ')} CASCADE`);
     await c.query(schema);

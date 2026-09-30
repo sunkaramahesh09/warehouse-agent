@@ -17,7 +17,7 @@
 | SOP-EXC-005 | Conflicting or ambiguous records | exception_resolver | — |
 | SOP-APR-001 | Action authority and approvals | exception_resolver, shift_planner | `{"autonomous": ["HOLD_ORDER", "SYNC_ORDER_STATUS_FORWARD", "CREATE_ESCALATION", "REQUEST_APPROVAL"], "approval_required": ["CANCEL_ORDER", "RELINK_SHIPMENT", "ADJUST_INVENTORY", "RELEASE_HOLD"], "prohibited": ["DELETE_ORDER", "MERGE_ORDERS", "BACKWARD_STATUS_CHANGE"], "approval_ttl_minutes": 120}` |
 | SOP-PLN-001 | Planning eligibility and prioritization | shift_planner | `{"urgency_bucket_minutes": [120, 240], "plannable_statuses": ["PENDING", "PICKING"]}` |
-| SOP-PLN-002 | Capacity, skills and inventory constraints | shift_planner, exception_resolver | `{"minutes_per_location": 2, "minutes_per_extra_zone": 3}` |
+| SOP-PLN-002 | Capacity, skills and inventory constraints | shift_planner, exception_resolver | `{"minutes_per_location": 2, "minutes_per_extra_zone": 3, "default_strategy": "greedy"}` |
 | SOP-PLN-003 | Replanning | shift_planner | — |
 
 ## SOP-SOT-001 — Inventory source of truth
@@ -99,12 +99,12 @@
 
 ## SOP-PLN-002 — Capacity, skills and inventory constraints
 
-> Work may only be assigned to AVAILABLE pickers who hold every skill the order's SKUs require. A picker's assigned workload may never exceed capacity_minutes. Orders are not split across pickers. Workload is remaining units times pick minutes per unit, plus 2 minutes per distinct location and 3 minutes per additional zone. Among feasible pickers prefer one who finishes before the deadline, then the earliest finish, then the nearest zone. If a picker has capacity but no picker can meet the deadline, assign and flag SLA risk. If no picker has capacity or skill, mark the order INFEASIBLE with the reason. Inventory is re-checked when an assignment is dispatched.
+> Work may only be assigned to AVAILABLE pickers who hold every skill the order's SKUs require. A picker's assigned workload may never exceed capacity_minutes. Orders are not split across pickers. Workload is remaining units times pick minutes per unit, plus 2 minutes per distinct location and 3 minutes per additional zone. Among feasible pickers prefer one who finishes before the deadline, then the earliest finish, then the nearest zone. If a picker has capacity but no picker can meet the deadline, assign and flag SLA risk. If no picker has capacity or skill, mark the order INFEASIBLE with the reason. Inventory is re-checked when an assignment is dispatched. The default strategy is greedy assignment in priority order; an operator may request an optional local-search improvement pass that may only move un-started work, must keep every hard constraint, and must reduce (lexicographically) SLA-risk orders, total lateness, reassignment churn, then makespan.
 
 - **Applies to:** shift_planner, exception_resolver
-- **Retrieval keywords:** capacity, picker, workload, skill, cold, bulky, assignment, feasible, infeasible, location, zone, proximity
-- **Machine-readable params:** `{"minutes_per_location": 2, "minutes_per_extra_zone": 3}`
-- **Where it is enforced:** Planner reads `minutes_per_location` / `minutes_per_extra_zone`. Capacity/skill/inventory are hard constraints. Dispatch re-checks inventory.
+- **Retrieval keywords:** capacity, picker, workload, skill, cold, bulky, assignment, feasible, infeasible, location, zone, proximity, optimizer, local search, strategy, makespan
+- **Machine-readable params:** `{"minutes_per_location": 2, "minutes_per_extra_zone": 3, "default_strategy": "greedy"}`
+- **Where it is enforced:** Planner reads `minutes_per_location` / `minutes_per_extra_zone` / `default_strategy` (greedy | local_search; per-run override). Capacity/skill/inventory are hard constraints, re-checked by the optimizer on every move. Dispatch re-checks inventory.
 
 ## SOP-PLN-003 — Replanning
 

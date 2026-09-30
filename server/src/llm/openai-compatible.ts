@@ -8,6 +8,16 @@ import { LLMError, type ChatMessage, type LLMProvider, type ToolSpec } from './p
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Process-wide pacing: requests are spaced at least minIntervalMs apart (shared by all runs).
+let nextSlot = 0;
+async function pace(minIntervalMs: number) {
+  if (minIntervalMs <= 0) return;
+  const now = Date.now();
+  const at = Math.max(now, nextSlot);
+  nextSlot = at + minIntervalMs;
+  if (at > now) await sleep(at - now);
+}
+
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name = 'openai-compatible';
   constructor(
@@ -27,6 +37,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       temperature: 0,
     });
     for (let attempt = 0; ; attempt++) {
+      await pace(config.llm.minIntervalMs);
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), this.timeoutMs);
       let res: Response;

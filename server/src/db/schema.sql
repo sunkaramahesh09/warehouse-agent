@@ -10,6 +10,8 @@ CREATE TABLE sim_state (
   shift_end     TIMESTAMPTZ NOT NULL,
   -- fault injection: { "<tool_name>": { "mode": "TIMEOUT" | "ERROR", "remaining": n } }
   faults        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- event-driven automation switches (operator-controlled)
+  automation    JSONB NOT NULL DEFAULT '{"auto_detect": true, "auto_investigate": false, "auto_replan": false}'::jsonb,
   seed_version  TEXT NOT NULL
 );
 
@@ -229,3 +231,20 @@ CREATE TABLE action_log (
   result          JSONB NOT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Transactional outbox: domain events are written in the SAME transaction as the state
+-- change that caused them, then dispatched to automation handlers.
+CREATE TABLE domain_events (
+  event_id      BIGSERIAL PRIMARY KEY,
+  type          TEXT NOT NULL,
+  payload       JSONB NOT NULL,
+  source_tool   TEXT NOT NULL,
+  run_id        TEXT,
+  sim_time      TIMESTAMPTZ NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  status        TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSED','SKIPPED','FAILED')),
+  handled_by    TEXT,
+  result        JSONB,
+  processed_at  TIMESTAMPTZ
+);
+CREATE INDEX domain_events_pending ON domain_events(event_id) WHERE status = 'PENDING';

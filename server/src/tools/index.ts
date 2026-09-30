@@ -2,6 +2,7 @@ import { executeTool, type Tool, type ToolCtx, type ToolResult } from './framewo
 import * as read from './read-tools.js';
 import * as act from './action-tools.js';
 import * as plan from './planner-tools.js';
+import * as ev from './event-tools.js';
 
 export const TOOLS: Record<string, Tool> = Object.fromEntries(
   [
@@ -9,6 +10,7 @@ export const TOOLS: Record<string, Tool> = Object.fromEntries(
     act.holdOrder, act.syncOrderStatus, act.requestApproval, act.decideApproval, act.executeApprovedAction,
     act.createEscalation, act.updateExceptionStatus, act.resolveEscalation,
     plan.generatePlan, plan.setPickerAvailability, plan.injectUrgentOrder, plan.adjustInventorySim, plan.injectFault, plan.advanceClock,
+    ev.recordCycleCount, ev.detectInventoryShortfalls, ev.setAutomation,
   ].map((t) => [t.name, t as Tool]),
 );
 

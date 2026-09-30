@@ -208,3 +208,4 @@ Recorded during implementation. See also `REFLECTION.md`.
 4. **Two workspaces instead of six packages; raw SQL instead of an ORM.** Same boundaries, less tooling (see ARCHITECTURE.md).
 5. **LLM model:** Gemini `gemini-3.1-flash-lite` (the planned 2.5 model is retired for new keys; free quota on 3.5-flash is 20 requests).
 6. **Added:** a claimed-action detector (the model narrated actions before they executed) and per-run agent mode in scenario results (a green suite had hidden LLM fallbacks).
+7. **Optional features (after tagging `v1.0-core`):** event outbox + dispatcher + deterministic shortfall detector; metrics + evaluation harness; local-search optimizer. This required splitting planner picker-choice from a finalize pass. See OPTIONAL_FEATURES.md.

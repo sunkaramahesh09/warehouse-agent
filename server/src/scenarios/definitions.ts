@@ -10,6 +10,7 @@ import { investigateException, decideApproval, executeApproval, type ResolverRep
 import { runPlanner } from '../planner/service.js';
 import { setProviderForTests } from '../llm/index.js';
 import type { ChatMessage, LLMProvider } from '../llm/provider.js';
+import { processEvents } from '../events/dispatcher.js';
 
 export interface Check { name: string; expected: string; actual: string; pass: boolean }
 export interface ScenarioOutcome { checks: Check[]; artifacts: Record<string, unknown>; notes?: string }
@@ -535,6 +536,85 @@ export const SCENARIOS: Scenario[] = [
           chk('no cancel executed', false, r.actions.some((a) => a.tool === 'execute_approved_action')),
         ],
         artifacts: { guard: r.guard, proposal: r.proposal },
+      };
+    },
+  },
+  // ------------------------------------------------------------------ optional features
+  {
+    id: 'event-driven', category: 'integration', title: 'Event-driven: cycle count → detect → auto-investigate → auto-replan',
+    setup: 'Plan v1 active. Automation ON (auto_detect, auto_investigate, auto_replan). SKU-003@B-01: system on_hand 40, reserved 5.',
+    trigger: 'Cycle count records only 12 × SKU-003 at B-01 (effective 7). Then automation OFF and a second count.',
+    expected: 'Detector raises shortfalls for ORD-1002 (needs 10) and ORD-1016 (needs 8) but not ORD-1009 (5); both are auto-investigated (hold + escalation, never approval); holds are coalesced into ONE replan where both are BLOCKED by their new exceptions. With automation off, events are SKIPPED and no plan is created.',
+    boundary: 'Automation reuses the same guarded resolver and tools; it never approves anything.',
+    run: async (mode) => {
+      await resetEnvironment();
+      const v1 = await runPlanner('INITIAL', { explain: false });
+      await callTool('set_automation', { auto_detect: true, auto_investigate: true, auto_replan: true }, OP);
+      const cc = await callTool<any>('record_cycle_count', { sku: 'SKU-003', location_id: 'B-01', counted_qty: 12 }, OP);
+      const d = await processEvents({ mode });
+      for (const h of d.handled) if (h.handled_by === 'exception_resolver') runModes.push(`auto-investigate ${(h.result as any).run_id}:${(h.result as any).mode}`);
+      const exc = await many(pool, `SELECT * FROM exceptions WHERE exception_id >= 'EXC-3000' ORDER BY exception_id`);
+      const { plan, rows, row } = await activePlan();
+      const pending = await one(pool, `SELECT count(*)::int n FROM domain_events WHERE status = 'PENDING'`);
+      const approvalsExecuted = await one(pool, `SELECT count(*)::int n FROM approvals WHERE status = 'EXECUTED'`);
+      const plansAfterFirst = (await one(pool, 'SELECT count(*)::int n FROM plans'))!.n;
+      await callTool('set_automation', { auto_detect: false, auto_investigate: false, auto_replan: false }, OP);
+      await callTool('record_cycle_count', { sku: 'SKU-001', location_id: 'A-01', counted_qty: 5 }, OP);
+      const d2 = await processEvents({ mode });
+      const plansAfterSecond = (await one(pool, 'SELECT count(*)::int n FROM plans'))!.n;
+      const flagged = exc.map((e: any) => e.order_id).sort().join(',');
+      return {
+        checks: [
+          chk('cycle count recorded', true, cc.success),
+          chk('detector flagged exactly the unfulfillable orders', 'ORD-1002,ORD-1016', flagged),
+          chk('both auto-investigated → held & escalated', 'ESCALATED,ESCALATED', exc.map((e: any) => e.status).join(',')),
+          chk('orders held by their exceptions', true, ['ORD-1002', 'ORD-1016'].every((o) => exc.find((e: any) => e.order_id === o))),
+          chk('holds coalesced into ONE replan (v2)', `v${v1.plan.version + 1}`, `v${plan?.version}`),
+          chk('ORD-1002 blocked by new exception', exc.find((e: any) => e.order_id === 'ORD-1002')?.exception_id, row('ORD-1002')?.exception_ref),
+          chk('ORD-1016 blocked by new exception', exc.find((e: any) => e.order_id === 'ORD-1016')?.exception_id, row('ORD-1016')?.exception_ref),
+          chk('no events left pending', 0, pending.n),
+          chk('automation never executed an approval', 0, approvalsExecuted.n),
+          chk('automation OFF: events skipped', true, d2.handled.length > 0 && d2.handled.every((h) => h.status === 'SKIPPED')),
+          chk('automation OFF: no new plan', plansAfterFirst, plansAfterSecond),
+        ],
+        artifacts: { dispatch: d.handled.map((h) => `#${h.event_id} ${h.type} → ${h.status} (${h.handled_by})`), plan_trigger: plan?.trigger, blocked: rows.filter((r: any) => r.status === 'BLOCKED').map((r: any) => `${r.order_id}:${r.exception_ref ?? '-'}`) },
+      };
+    },
+  },
+  {
+    id: 'optimizer', category: 'planner', title: 'Advanced scheduling: local search vs greedy',
+    setup: 'Baseline state, planned twice from the same reset: once greedy, once with strategy local_search.',
+    trigger: 'Generate plan (INITIAL) with each strategy',
+    expected: 'Local search never makes the objective worse (SLA risk, lateness, churn, makespan), keeps exactly the same orders scheduled, never moves in-progress work, respects capacity/skills/availability, explains each move, and is deterministic.',
+    boundary: 'Optimizer may only move un-started work and must keep every hard constraint (SOP-PLN-002).',
+    run: async () => {
+      await resetEnvironment();
+      const g = await runPlanner('INITIAL', { explain: false, strategy: 'greedy' });
+      await resetEnvironment();
+      const o = await runPlanner('INITIAL', { explain: false, strategy: 'local_search' });
+      await resetEnvironment();
+      const o2 = await runPlanner('INITIAL', { explain: false, strategy: 'local_search' });
+      const opt = o.plan.summary.optimizer;
+      const sched = (p: any) => p.plan.assignments.filter((a: any) => ['ASSIGNED', 'IN_PROGRESS'].includes(a.status)).map((a: any) => a.order_id).sort().join(',');
+      const lex = (x: any) => [x.sla_at_risk, x.lateness_min, x.churn, x.makespan_min];
+      const cmp = lex(opt.after).map((v: number, i: number) => v - lex(opt.before)[i]).find((d: number) => d !== 0) ?? 0;
+      const inProg = (p: any) => p.plan.assignments.filter((a: any) => a.status === 'IN_PROGRESS').map((a: any) => `${a.order_id}:${a.picker_id}`).join(',');
+      const gMax = Math.max(...g.plan.pickers.map((x: any) => x.planned_minutes));
+      const oMax = Math.max(...o.plan.pickers.map((x: any) => x.planned_minutes));
+      const moved = o.plan.assignments.filter((a: any) => /Optimizer/.test(a.rationale));
+      return {
+        checks: [
+          chk('optimizer ran', 'local_search', o.plan.summary.strategy),
+          chk('objective never worse', true, cmp <= 0),
+          chk('same orders scheduled as greedy', sched(g), sched(o)),
+          chk('in-progress work untouched', inProg(g), inProg(o)),
+          chk('capacity respected', 0, o.plan.pickers.filter((x: any) => x.planned_minutes > x.remaining_capacity_minutes).length),
+          chk('unavailable picker unused', false, o.plan.assignments.some((a: any) => a.picker_id === 'P-05')),
+          chk('makespan not increased', true, oMax <= gMax),
+          chk('every move explained in rationale', opt.moves.length > 0 ? true : 'no moves', opt.moves.length > 0 ? moved.length >= opt.moves.length : 'no moves'),
+          chk('deterministic', JSON.stringify(o.plan.assignments.map((a: any) => [a.order_id, a.picker_id, a.sequence])), JSON.stringify(o2.plan.assignments.map((a: any) => [a.order_id, a.picker_id, a.sequence]))),
+        ],
+        artifacts: { greedy_makespan: gMax, optimized_makespan: oMax, optimizer: opt },
       };
     },
   },

@@ -123,3 +123,48 @@ describe('deterministic planner', () => {
     expect(plan.metrics!.preserved).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('local-search optimizer (optional strategy)', () => {
+  // Greedy puts O1 on P2 (nearest zone), leaving the COLD order O2 — which only P2 can pick — late.
+  const scenario = (strategy: 'greedy' | 'local_search') => buildPlan(input({
+    strategy,
+    orders: [order('O1', { priority: 1, deadline: at('09:30') }), order('O2', { priority: 3, deadline: at('08:40') })],
+    lines: [line('O1', 'S1', 28), line('O2', 'COLD1', 28)],
+    pickers: [picker('P1', 200, { home_zone: 'C' }), picker('P2', 200, { home_zone: 'A', skills: ['STANDARD', 'COLD'] })],
+  }));
+
+  it('greedy leaves an SLA risk that local search removes without breaking constraints', () => {
+    const g = scenario('greedy');
+    expect(row(g, 'O1').picker_id).toBe('P2');
+    expect(row(g, 'O2').sla_at_risk).toBe(true);
+    const o = scenario('local_search');
+    expect(row(o, 'O1').picker_id).toBe('P1');
+    expect(row(o, 'O2').picker_id).toBe('P2');
+    expect(o.summary.sla_at_risk).toBe(0);
+    expect(o.summary.optimizer!.before.sla_at_risk).toBe(1);
+    expect(o.summary.optimizer!.after.sla_at_risk).toBe(0);
+    expect(row(o, 'O1').rationale).toMatch(/Optimizer \(local search\): moved P2 → P1/);
+  });
+
+  it('never moves in-progress work, never violates capacity or skills, keeps the same orders assigned', () => {
+    const mk = (strategy: 'greedy' | 'local_search') => buildPlan(input({
+      strategy,
+      orders: [order('IP', { status: 'PICKING', assigned_picker_id: 'P1' }), order('A', { priority: 1 }), order('B'), order('C'), order('D', { priority: 3 })],
+      lines: [line('IP', 'S1', 20, 5), line('A', 'S1', 30), line('B', 'S2', 10), line('C', 'S1', 25), line('D', 'COLD1', 10)],
+      pickers: [picker('P1', 80), picker('P2', 60), picker('P3', 60, { skills: ['STANDARD', 'COLD'] })],
+    }));
+    const g = mk('greedy');
+    const o = mk('local_search');
+    expect(row(o, 'IP').picker_id).toBe('P1');
+    expect(o.pickers.every((p) => p.planned_minutes <= p.remaining_capacity_minutes)).toBe(true);
+    expect(row(o, 'D').picker_id).toBe('P3');
+    const assigned = (p: ReturnType<typeof buildPlan>) => p.assignments.filter((a) => a.status === 'ASSIGNED' || a.status === 'IN_PROGRESS').map((a) => a.order_id).sort();
+    expect(assigned(o)).toEqual(assigned(g));
+    const ob = o.summary.optimizer!;
+    const lex = (x: typeof ob.after) => [x.sla_at_risk, x.lateness_min, x.churn, x.makespan_min];
+    const cmp = lex(ob.after).map((v, i) => v - lex(ob.before)[i]).find((d) => d !== 0) ?? 0;
+    expect(cmp).toBeLessThanOrEqual(0); // never worse
+    if (ob.moves.length) expect(cmp).toBeLessThan(0); // every accepted move strictly improves
+    expect(JSON.stringify(mk('local_search'))).toEqual(JSON.stringify(o)); // deterministic
+  });
+});

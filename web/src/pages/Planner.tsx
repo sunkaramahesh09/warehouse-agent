@@ -23,18 +23,20 @@ export default function Planner() {
   const [lastRun, setLastRun] = useState<any>(null);
   const [autoReplan, setAutoReplan] = useState(true);
   const [pickerSel, setPickerSel] = useState('P-02');
+  const [strategy, setStrategy] = useState<'greedy' | 'local_search'>('greedy');
+  const serverAutoReplan = !!meta.data?.sim?.automation?.auto_replan;
   const isOp = getRole() === 'operator';
 
   useEffect(() => { setVer(null); }, [active?.version]);
 
   const runPlanner = (trigger: string, detail?: string) => act.run(`plan-${trigger}`, async () => {
-    const r = await api.post('/api/planner/run', { trigger, detail });
+    const r = await api.post('/api/planner/run', { trigger, detail, strategy });
     setLastRun(r);
     return r;
   });
   const inject = (key: string, path: string, body: any, trigger: string, detail: string) => act.run(key, async () => {
     await api.post(path, body);
-    if (autoReplan && active) { const r = await api.post('/api/planner/run', { trigger, detail }); setLastRun(r); }
+    if (autoReplan && active) { const r = await api.post('/api/planner/run', { trigger, detail, strategy }); setLastRun(r); }
   });
 
   const rows: any[] = plan.data?.assignments ?? [];
@@ -51,12 +53,16 @@ export default function Planner() {
     <div className="space-y-4">
       <PageHeader title="Shift planner" subtitle={<>Deterministic scheduler (SOP-PLN-001/002/003) over the shared state. The LLM may explain the plan; it never does the arithmetic. Simulated time: <b className="mono">{hhmm(meta.data?.sim.sim_now)}</b></>}
         actions={<>
+          <select className="input" value={strategy} onChange={(e) => setStrategy(e.target.value as any)} title="Planning strategy (SOP-PLN-002)">
+            <option value="greedy">Greedy (SOP default)</option>
+            <option value="local_search">Greedy + local search</option>
+          </select>
           <button className="btn-primary" disabled={!!act.busy} onClick={() => runPlanner(active ? 'MANUAL_REFRESH' : 'INITIAL')}>{active ? '↻ Refresh plan' : 'Generate plan'}</button>
           {active && <button className="btn-secondary" disabled={!!act.busy} onClick={() => runPlanner('EXCEPTION_HOLD', 'Refresh after exception resolution')}>Refresh after exception</button>}
         </>} />
       <ErrorBox msg={act.error} />
 
-      <Card title="Mid-shift changes (simulated)" actions={<label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={autoReplan} onChange={(e) => setAutoReplan(e.target.checked)} /> replan automatically after a change</label>}>
+      <Card title="Mid-shift changes (simulated)" actions={serverAutoReplan ? <span className="text-xs text-teal-700">Server event-driven auto-replan is ON (Events &amp; Automation)</span> : <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={autoReplan} onChange={(e) => setAutoReplan(e.target.checked)} /> replan automatically after a change</label>}>
         {!isOp && <div className="mb-2 text-xs text-slate-500">Operator role required.</div>}
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-xs font-semibold text-slate-500">Clock</span>
@@ -96,7 +102,7 @@ export default function Planner() {
             <span className="text-slate-500">Version</span>
             {(plans.data ?? []).slice().reverse().map((x) => (
               <button key={x.version} onClick={() => setVer(x.version)} className={`rounded-md border px-2 py-1 text-xs ${x.version === shown ? 'border-teal-600 bg-teal-50 font-semibold text-teal-800' : 'border-slate-300 bg-white'}`}>
-                v{x.version} · {x.trigger.replace(/_/g, ' ').toLowerCase()} {x.status === 'ACTIVE' ? '●' : ''}
+                v{x.version} · {x.trigger.replace(/_/g, ' ').toLowerCase()}{x.summary?.strategy === 'local_search' ? ' ⚙' : ''} {x.status === 'ACTIVE' ? '●' : ''}
               </button>
             ))}
           </div>
@@ -108,6 +114,19 @@ export default function Planner() {
             <Stat label="Infeasible" value={p.summary.infeasible} tone="rose" />
             <Stat label="SLA at risk" value={p.summary.sla_at_risk} tone={p.summary.sla_at_risk ? 'rose' : 'slate'} hint={p.summary.metrics ? `${p.summary.metrics.preserved} preserved · ${p.summary.metrics.changed} changed` : undefined} />
           </div>
+
+          {p.summary.optimizer && (
+            <Card title={<>Optimizer (local search) <span className="font-normal text-slate-500">— {p.summary.optimizer.moves.length} move(s), {p.summary.optimizer.iterations} iteration(s)</span></>}>
+              <table className="tbl">
+                <thead><tr><th>Objective (lexicographic)</th><th>Greedy</th><th>After local search</th></tr></thead>
+                <tbody>{[['SLA-risk orders', 'sla_at_risk'], ['Total lateness (min)', 'lateness_min'], ['Reassignment churn', 'churn'], ['Makespan (min)', 'makespan_min']].map(([l, k]) => (
+                  <tr key={k}><td>{l}</td><td className="mono">{p.summary.optimizer.before[k]}</td><td className={`mono ${p.summary.optimizer.after[k] < p.summary.optimizer.before[k] ? 'font-semibold text-emerald-700' : ''}`}>{p.summary.optimizer.after[k]}</td></tr>
+                ))}</tbody>
+              </table>
+              <ul className="mt-2 list-disc pl-5 text-xs text-slate-600">{p.summary.optimizer.moves.map((mv: any, i: number) => <li key={i}>{mv.kind} <span className="font-mono">{mv.order_id}</span>{mv.other_order_id ? <> ↔ <span className="font-mono">{mv.other_order_id}</span></> : null}: {mv.from} → {mv.to} ({mv.improvement})</li>)}</ul>
+              <div className="mt-1 text-xs text-slate-500">Only un-started work moves; capacity, skills and availability are re-checked for every move; queues keep priority order.</div>
+            </Card>
+          )}
 
           {p.parent_version && (
             <Card title={<>What changed: v{p.parent_version} → v{p.version} <span className="font-normal text-slate-500">({p.trigger}{p.trigger_detail ? `: ${p.trigger_detail}` : ''})</span></>}>

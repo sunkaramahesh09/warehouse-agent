@@ -6,6 +6,7 @@
  */
 import { computeWorkload, round2, validateOrderData, zoneDistance, type Workload } from '../domain/rules.js';
 import type { InventoryRow, Order, OrderLine, Picker, Sku } from '../domain/types.js';
+import { localSearch, type OptimizerReport } from './optimizer.js';
 
 export type AssignmentStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED' | 'INFEASIBLE';
 
@@ -14,6 +15,8 @@ export interface PlanParams {
   plannable_statuses: string[];
   minutes_per_location: number;
   minutes_per_extra_zone: number;
+  /** SOP-PLN-002 default_strategy: 'greedy' | 'local_search' */
+  strategy?: string;
 }
 
 export interface PrevAssignment {
@@ -37,6 +40,8 @@ export interface PlannerInput {
   openExceptions: Array<{ exception_id: string; order_id: string; type: string; status: string }>;
   params: PlanParams;
   previous?: { version: number; assignments: PrevAssignment[] } | null;
+  /** Per-run override of the SOP default strategy. */
+  strategy?: 'greedy' | 'local_search';
 }
 
 export interface PlannedAssignment {
@@ -59,6 +64,12 @@ export interface PlannedAssignment {
   warnings: string[];
   change_type?: string;
   change_reason?: string;
+  required_skills?: string[];
+  // internal (stripped before returning)
+  _head?: string;
+  _wl?: Workload;
+  _noneMeets?: boolean;
+  _optNote?: string;
 }
 
 export interface PickerSummary {
@@ -82,6 +93,8 @@ export interface PlanResult {
     infeasible: number;
     sla_at_risk: number;
     total_planned_minutes: number;
+    strategy: string;
+    optimizer: OptimizerReport | null;
   };
   change_log: Array<{ order_id: string; change_type: string; from: string; to: string; reason: string }>;
   metrics?: { preserved: number; changed: number };
@@ -124,7 +137,7 @@ export function buildPlan(input: PlannerInput): PlanResult {
   const base = (o: Order, wl: Workload | null): Omit<PlannedAssignment, 'status' | 'rationale' | 'priority_rank'> => ({
     order_id: o.order_id, picker_id: null, sequence: null, workload_minutes: wl?.minutes ?? 0, est_start: null, est_finish: null,
     deadline: o.deadline, sla_at_risk: false, inventory_readiness: 'N/A', primary_zone: wl?.primary_zone ?? null, zones: wl?.zones ?? [],
-    block_reason: null, exception_ref: null, warnings: [],
+    block_reason: null, exception_ref: null, warnings: [], required_skills: wl?.required_skills ?? [],
   });
 
   // ---- Step 1: eligibility gates -------------------------------------------------
@@ -166,9 +179,6 @@ export function buildPlan(input: PlannerInput): PlanResult {
   for (const r of input.inventory) stock.set(r.sku, (stock.get(r.sku) ?? 0) + Math.max(0, r.available));
   const load = new Map<string, number>(input.pickers.map((p) => [p.picker_id, 0]));
   const zoneOf = new Map<string, string>(input.pickers.map((p) => [p.picker_id, p.home_zone]));
-  const seq = new Map<string, number>();
-  // continue per-picker numbering after completed work so unchanged items keep their sequence
-  for (const a of out) if (a.status === 'COMPLETED' && a.picker_id && a.sequence) seq.set(a.picker_id, Math.max(seq.get(a.picker_id) ?? 0, a.sequence));
   const remainingCap = (p: Picker & { consumed_minutes: number }) => Math.max(0, p.capacity_minutes - p.consumed_minutes);
 
   let rank = 0;
@@ -202,18 +212,9 @@ export function buildPlan(input: PlannerInput): PlanResult {
     // pinned in-progress work stays with its picker (Step 0)
     if (c.pinnedPicker) {
       const p = pickerBy.get(c.pinnedPicker)!;
-      const start = load.get(p.picker_id)!;
-      load.set(p.picker_id, start + w);
-      seq.set(p.picker_id, (seq.get(p.picker_id) ?? 0) + 1);
+      load.set(p.picker_id, load.get(p.picker_id)! + w);
       zoneOf.set(p.picker_id, c.wl.primary_zone ?? zoneOf.get(p.picker_id)!);
-      const finish = addMin(simNow, start + w);
-      const overCap = start + w > remainingCap(p);
-      if (overCap) warnings.push(`In-progress work exceeds ${p.picker_id}'s remaining capacity (${remainingCap(p)} min).`);
-      out.push({
-        ...base(o, c.wl), picker_id: p.picker_id, sequence: seq.get(p.picker_id)!, priority_rank: rank, status: 'IN_PROGRESS',
-        est_start: addMin(simNow, start), est_finish: finish, sla_at_risk: finish > o.deadline, inventory_readiness: 'READY', warnings,
-        rationale: `${head}. In progress with ${p.picker_id}; kept with the same picker (SOP-PLN-001 / SOP-PLN-003). Remaining ${w} min, est. finish ${HHMM(finish)}${finish > o.deadline ? ' — AFTER deadline (SLA risk)' : ''}.`,
-      });
+      out.push({ ...base(o, c.wl), picker_id: p.picker_id, priority_rank: rank, status: 'IN_PROGRESS', inventory_readiness: 'READY', warnings, rationale: '', _head: head, _wl: c.wl });
       continue;
     }
 
@@ -245,30 +246,31 @@ export function buildPlan(input: PlannerInput): PlanResult {
       a.p.picker_id.localeCompare(b.p.picker_id));
     const pick = scored[0];
     load.set(pick.p.picker_id, pick.start + w);
-    seq.set(pick.p.picker_id, (seq.get(pick.p.picker_id) ?? 0) + 1);
     zoneOf.set(pick.p.picker_id, c.wl.primary_zone ?? zoneOf.get(pick.p.picker_id)!);
-    const why = [
-      pick.meets ? `finishes ${HHMM(pick.finish)} before deadline ${HHMM(o.deadline)}` : `no picker can finish before ${HHMM(o.deadline)}; earliest finish ${HHMM(pick.finish)} — SLA AT RISK`,
-      pick.sticky ? 'kept previous picker (stability)' : null,
-      `zone distance ${pick.dist}`,
-      `load ${round2(pick.start + w)}/${remainingCap(pick.p)} min`,
-    ].filter(Boolean).join('; ');
-    out.push({
-      ...base(o, c.wl), picker_id: pick.p.picker_id, sequence: seq.get(pick.p.picker_id)!, priority_rank: rank, status: 'ASSIGNED',
-      est_start: addMin(simNow, pick.start), est_finish: pick.finish, sla_at_risk: !pick.meets, inventory_readiness: 'READY', warnings,
-      rationale: `${head}. Assigned ${pick.p.picker_id}: ${why}. Workload ${w} min (${c.wl.pick_minutes} pick + ${c.wl.travel_minutes} travel over ${c.wl.locations.join(', ')}).`,
-    });
+    out.push({ ...base(o, c.wl), picker_id: pick.p.picker_id, priority_rank: rank, status: 'ASSIGNED', inventory_readiness: 'READY', warnings, rationale: '', _head: head, _wl: c.wl, _noneMeets: !pick.meets });
   }
 
+  // ---- Step 3b (optional): local-search improvement over un-started work -------------
+  const strategy = input.strategy ?? params.strategy ?? 'greedy';
+  let optimizer: OptimizerReport | null = null;
+  if (strategy === 'local_search') {
+    optimizer = localSearch(out, { pickers: input.pickers, simNow, prevPicker: new Map((input.previous?.assignments ?? []).filter((a) => a.status === 'ASSIGNED' || a.status === 'IN_PROGRESS').map((a) => [a.order_id, a.picker_id])) });
+  }
+
+  // ---- Step 4: finalize sequences, timings, SLA flags and rationale per picker queue -------
+  finalize(out, input.pickers, simNow, prevBy);
+
   const pickers: PickerSummary[] = input.pickers.map((p) => {
-    const planned = round2(load.get(p.picker_id) ?? 0);
+    const mine = out.filter((a) => a.picker_id === p.picker_id && (a.status === 'ASSIGNED' || a.status === 'IN_PROGRESS'));
+    const planned = round2(mine.reduce((s2, a) => s2 + a.workload_minutes, 0));
     const cap = remainingCap(p);
     return {
       picker_id: p.picker_id, availability: p.availability, remaining_capacity_minutes: cap, planned_minutes: planned,
       utilization_pct: cap > 0 ? Math.round((planned / cap) * 100) : 0,
-      orders: out.filter((a) => a.picker_id === p.picker_id && (a.status === 'ASSIGNED' || a.status === 'IN_PROGRESS')).sort((a, b) => a.sequence! - b.sequence!).map((a) => a.order_id),
+      orders: mine.sort((a, b) => a.sequence! - b.sequence!).map((a) => a.order_id),
     };
   });
+  for (const a of out) { delete a._head; delete a._wl; delete a._noneMeets; delete a._optNote; }
 
   const assignments = out.sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || a.priority_rank - b.priority_rank || a.order_id.localeCompare(b.order_id));
   const count = (s: AssignmentStatus) => assignments.filter((a) => a.status === s).length;
@@ -281,6 +283,8 @@ export function buildPlan(input: PlannerInput): PlanResult {
       blocked: count('BLOCKED'), infeasible: count('INFEASIBLE'),
       sla_at_risk: assignments.filter((a) => a.sla_at_risk).length,
       total_planned_minutes: round2(pickers.reduce((s, p) => s + p.planned_minutes, 0)),
+      strategy,
+      optimizer,
     },
     change_log: [],
   };
@@ -337,4 +341,47 @@ function diffAgainst(result: PlanResult, previous: NonNullable<PlannerInput['pre
     }
   }
   result.metrics = { preserved, changed };
+}
+
+/**
+ * Compute per-picker sequence, estimated window, SLA flag and rationale from the final
+ * queue order (in-progress first, then un-started work in priority-rank order). Runs for
+ * every strategy, so the rationale always matches the final assignment.
+ */
+function finalize(out: PlannedAssignment[], pickers: Array<Picker & { consumed_minutes: number }>, simNow: string, prevBy: Map<string, PrevAssignment>) {
+  for (const p of pickers) {
+    const cap = Math.max(0, p.capacity_minutes - p.consumed_minutes);
+    let seqNo = Math.max(0, ...out.filter((a) => a.status === 'COMPLETED' && a.picker_id === p.picker_id).map((a) => a.sequence ?? 0));
+    const queue = out
+      .filter((a) => a.picker_id === p.picker_id && (a.status === 'IN_PROGRESS' || a.status === 'ASSIGNED'))
+      .sort((a, b) => (a.status === 'IN_PROGRESS' ? 0 : 1) - (b.status === 'IN_PROGRESS' ? 0 : 1) || a.priority_rank - b.priority_rank);
+    let t = 0;
+    let zone = p.home_zone;
+    for (const a of queue) {
+      const w = a.workload_minutes;
+      const start = t;
+      t += w;
+      a.sequence = ++seqNo;
+      a.est_start = addMin(simNow, start);
+      a.est_finish = addMin(simNow, t);
+      a.sla_at_risk = a.est_finish > a.deadline;
+      const dist = zoneDistance(zone, a.primary_zone ?? zone);
+      zone = a.primary_zone ?? zone;
+      const wl = a._wl!;
+      if (a.status === 'IN_PROGRESS') {
+        if (t > cap) a.warnings.push(`In-progress work exceeds ${p.picker_id}'s remaining capacity (${cap} min).`);
+        a.rationale = `${a._head}. In progress with ${p.picker_id}; kept with the same picker (SOP-PLN-001 / SOP-PLN-003). Remaining ${w} min, est. finish ${HHMM(a.est_finish)}${a.sla_at_risk ? ' — AFTER deadline (SLA risk)' : ''}.`;
+        continue;
+      }
+      const why = [
+        a.sla_at_risk
+          ? `est. finish ${HHMM(a.est_finish)} is after deadline ${HHMM(a.deadline)} — SLA AT RISK${a._noneMeets && !a._optNote ? ' (no feasible picker could meet it)' : ''}`
+          : `finishes ${HHMM(a.est_finish)} before deadline ${HHMM(a.deadline)}`,
+        prevBy.get(a.order_id)?.picker_id === p.picker_id ? 'kept previous picker (stability)' : null,
+        `zone distance ${dist}`,
+        `load ${round2(t)}/${cap} min`,
+      ].filter(Boolean).join('; ');
+      a.rationale = `${a._head}. Assigned ${p.picker_id}: ${why}. Workload ${w} min (${wl.pick_minutes} pick + ${wl.travel_minutes} travel over ${wl.locations.join(', ')}).${a._optNote ? ` ${a._optNote}` : ''}`;
+    }
+  }
 }

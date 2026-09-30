@@ -33,6 +33,8 @@ const TONES: Record<string, string> = {
   UNAVAILABLE: 'bg-rose-50 text-rose-700 ring-rose-300',
   ACTIVE: 'bg-teal-50 text-teal-700 ring-teal-300',
   SUPERSEDED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
+  PROCESSED: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
+  SKIPPED: 'bg-zinc-100 text-zinc-600 ring-zinc-300',
   PASS: 'bg-emerald-50 text-emerald-700 ring-emerald-300',
   PARTIAL: 'bg-amber-50 text-amber-800 ring-amber-300',
   FAIL: 'bg-rose-50 text-rose-700 ring-rose-300',

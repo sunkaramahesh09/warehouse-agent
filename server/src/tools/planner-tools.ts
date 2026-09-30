@@ -14,6 +14,7 @@ import type { Order, Picker } from '../domain/types.js';
 import { policyParams } from '../policy/retrieval.js';
 import { audit } from '../audit/audit.js';
 import { newId } from './action-tools.js';
+import { emit } from '../events/emit.js';
 
 export async function planningSnapshot(c: pg.PoolClient | pg.Pool) {
   const st = await repo.simState(c);
@@ -35,10 +36,13 @@ export async function planningSnapshot(c: pg.PoolClient | pg.Pool) {
       plannable_statuses: pln1.plannable_statuses,
       minutes_per_location: pln2.minutes_per_location,
       minutes_per_extra_zone: pln2.minutes_per_extra_zone,
+      strategy: pln2.default_strategy ?? 'greedy',
     },
     previous: prevPlan ? { version: prevPlan.version as number, assignments: prevRows } : null,
   };
 }
+
+export const REPLAN_EVENT_TYPES = ['ORDER_HELD', 'ORDER_RELEASED', 'ORDER_CANCELLED', 'ORDER_CREATED', 'PICKER_AVAILABILITY_CHANGED', 'INVENTORY_CHANGED'];
 
 export const PLAN_TRIGGERS = ['INITIAL', 'MANUAL_REFRESH', 'PICKER_UNAVAILABLE', 'URGENT_ORDER', 'EXCEPTION_HOLD', 'INVENTORY_CHANGED', 'PICKER_AVAILABLE'] as const;
 
@@ -47,11 +51,11 @@ export const generatePlan = defineTool({
   description: 'Run the deterministic planner on current shared state and persist a new plan version (incremental against the active plan).',
   kind: 'action',
   roles: ['agent', 'operator', 'system'],
-  input: z.object({ trigger: z.enum(PLAN_TRIGGERS), trigger_detail: z.string().max(300).optional(), run_id: z.string() }),
+  input: z.object({ trigger: z.enum(PLAN_TRIGGERS), trigger_detail: z.string().max(300).optional(), run_id: z.string(), strategy: z.enum(['greedy', 'local_search']).optional() }),
   run: async (c, i, _ctx, note) => {
     await c.query('LOCK TABLE plans IN EXCLUSIVE MODE'); // serialize plan versioning
     const snap = await planningSnapshot(c);
-    const result: PlanResult = buildPlan(snap);
+    const result: PlanResult = buildPlan({ ...snap, strategy: i.strategy });
     const version = ((await one<{ v: number }>(c, 'SELECT COALESCE(max(version),0)::int v FROM plans'))!.v) + 1;
     const parent = snap.previous?.version ?? null;
     await c.query(`UPDATE plans SET status = 'SUPERSEDED' WHERE status = 'ACTIVE'`);
@@ -80,10 +84,15 @@ export const generatePlan = defineTool({
         released.push(o.order_id);
       }
     }
+    // Events whose effects are already reflected in this snapshot are consumed by this plan version.
+    const absorbed = await many<{ event_id: number }>(c,
+      `UPDATE domain_events SET status = 'PROCESSED', handled_by = $1, result = $2, processed_at = now()
+       WHERE status = 'PENDING' AND type = ANY($3) RETURNING event_id`,
+      [`generate_plan v${version}`, JSON.stringify({ absorbed_by_plan_version: version }), REPLAN_EVENT_TYPES]);
     note.event_type = parent ? 'PLAN_CHANGE' : 'PLAN_CREATED';
     note.policy_refs = ['SOP-PLN-001', 'SOP-PLN-002', ...(parent ? ['SOP-PLN-003'] : [])];
-    note.decision_summary = `Plan v${version} (${i.trigger}${parent ? `, from v${parent}` : ''}): ${result.summary.assigned} assigned, ${result.summary.in_progress} in progress, ${result.summary.blocked} blocked, ${result.summary.infeasible} infeasible, ${result.summary.sla_at_risk} SLA risk`;
-    note.state_changes = { plan_version: version, superseded: parent, change_log: result.change_log, released_picker_links: released };
+    note.decision_summary = `Plan v${version} (${i.trigger}${parent ? `, from v${parent}` : ''}, ${result.summary.strategy}${result.summary.optimizer ? `: ${result.summary.optimizer.moves.length} optimizer move(s)` : ''}): ${result.summary.assigned} assigned, ${result.summary.in_progress} in progress, ${result.summary.blocked} blocked, ${result.summary.infeasible} infeasible, ${result.summary.sla_at_risk} SLA risk`;
+    note.state_changes = { plan_version: version, superseded: parent, change_log: result.change_log, released_picker_links: released, absorbed_events: absorbed.map((e) => e.event_id) };
     return { version, parent_version: parent, trigger: i.trigger, sim_time: snap.simNow, ...result };
   },
 });
@@ -97,7 +106,7 @@ export const setPickerAvailability = defineTool({
   kind: 'action',
   roles: [...SIM_ROLES],
   input: z.object({ picker_id: z.string().regex(/^P-\d{2}$/), availability: z.enum(['AVAILABLE', 'UNAVAILABLE']), reason: z.string().min(3).max(200) }),
-  run: async (c, i, _ctx, note) => {
+  run: async (c, i, ctx, note) => {
     const p = await one<Picker>(c, 'SELECT * FROM pickers WHERE picker_id = $1 FOR UPDATE', [i.picker_id]);
     if (!p) throw new ToolError('NOT_FOUND', `Picker ${i.picker_id} does not exist`);
     if (p.availability === i.availability) throw new ToolError('NO_CHANGE', `${i.picker_id} is already ${i.availability}`);
@@ -105,6 +114,7 @@ export const setPickerAvailability = defineTool({
     note.event_type = 'SIM_CHANGE';
     note.decision_summary = `SIMULATED: ${i.picker_id} ${p.availability} → ${i.availability} (${i.reason})`;
     note.state_changes = [{ entity: 'picker', id: i.picker_id, field: 'availability', from: p.availability, to: i.availability }];
+    await emit(c, 'PICKER_AVAILABILITY_CHANGED', { picker_id: i.picker_id, from: p.availability, to: i.availability, reason: i.reason }, 'set_picker_availability', ctx);
     return { picker_id: i.picker_id, from: p.availability, to: i.availability };
   },
 });
@@ -123,7 +133,7 @@ export const injectUrgentOrder = defineTool({
     lines: z.array(z.object({ sku: z.string().regex(/^SKU-\d{3}$/), qty: z.number().int().positive() })).min(1),
   }),
   idempotencyKey: (i) => `inject:${i.order_id}`,
-  run: async (c, i, _ctx, note) => {
+  run: async (c, i, ctx, note) => {
     if (await repo.getOrderRow(c, i.order_id)) throw new ToolError('ALREADY_EXISTS', `${i.order_id} already exists`);
     const { sim_now } = await repo.simState(c);
     const deadline = new Date(new Date(sim_now).getTime() + i.due_in_minutes * 60000).toISOString();
@@ -140,6 +150,7 @@ export const injectUrgentOrder = defineTool({
     note.event_type = 'SIM_CHANGE';
     note.decision_summary = `SIMULATED: urgent order ${i.order_id} (P${i.priority}, due ${deadline.slice(11, 16)}) arrived`;
     note.state_changes = [{ entity: 'order', id: i.order_id, field: 'created', to: 'PENDING' }];
+    await emit(c, 'ORDER_CREATED', { order_id: i.order_id, priority: i.priority, deadline }, 'inject_urgent_order', ctx);
     return { order_id: i.order_id, deadline };
   },
 });
@@ -150,7 +161,7 @@ export const adjustInventorySim = defineTool({
   kind: 'action',
   roles: [...SIM_ROLES],
   input: z.object({ sku: z.string(), location_id: z.string(), on_hand: z.number().int().min(0), reason: z.string().min(3) }),
-  run: async (c, i, _ctx, note) => {
+  run: async (c, i, ctx, note) => {
     const r = await one(c, 'SELECT * FROM inventory WHERE sku = $1 AND location_id = $2 FOR UPDATE', [i.sku, i.location_id]);
     if (!r) throw new ToolError('NOT_FOUND', `No inventory for ${i.sku} at ${i.location_id}`);
     const { sim_now } = await repo.simState(c);
@@ -159,6 +170,7 @@ export const adjustInventorySim = defineTool({
     note.event_type = 'SIM_CHANGE';
     note.decision_summary = `SIMULATED: ${i.sku}@${i.location_id} on_hand ${r.on_hand} → ${i.on_hand} (${i.reason})`;
     note.state_changes = [{ entity: 'inventory', id: `${i.sku}@${i.location_id}`, field: 'on_hand', from: r.on_hand, to: i.on_hand }];
+    await emit(c, 'INVENTORY_CHANGED', { sku: i.sku, location_id: i.location_id, from: r.on_hand, to: i.on_hand }, 'simulate_inventory_change', ctx);
     return { sku: i.sku, location_id: i.location_id, from: r.on_hand, to: i.on_hand };
   },
 });

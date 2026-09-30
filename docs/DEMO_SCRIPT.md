@@ -53,4 +53,9 @@
 17. **Audit Log**: filter on the EXC-2001 run id. It shows RUN_STARTED → TOOL_CALLs → DECISION (policy refs) → STATE_CHANGE hold_order → ESCALATION_CREATED → RUN_COMPLETED. Expand a row for input/result/state changes. Mention **Export JSONL**.
 18. **Scenarios & Tests → Run all**: 18/18 PASS, expected vs actual per check (timeout, duplicate action, approval expiry, inventory drift, unsafe LLM proposal…). Mention `npm test` (50 tests) and `npm run scenario -- all --llm`.
 
+## Optional extras (≈2 min, if time allows)
+19. **Shift Planner:** reset, select **Greedy + local search**, then **Generate plan** → Optimizer panel (makespan 109 → 85, explained swaps).
+20. **Events & Automation:** turn on all three switches, record a cycle count **SKU-003 @ B-01 = 12** → the event log shows detection → 2 auto-investigations → holds → one auto-replan. Planner: ORD-1002/ORD-1016 are BLOCKED by EXC-3001/3002.
+21. **Metrics & Evaluation:** unsafe actions 0, escalation recall/precision, LLM agreement/overrides, feasibility, preservation. **Run evaluation** → 100% accuracy, 100% consistency.
+
 **Close:** "One database, two workflows, controlled tools, shared SOP, deterministic safety boundaries. The LLM investigates and explains; it never has the final say on a state change."

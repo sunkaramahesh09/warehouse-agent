@@ -12,10 +12,12 @@ import Planner from './pages/Planner';
 import Audit from './pages/Audit';
 import Scenarios from './pages/Scenarios';
 import Policies from './pages/Policies';
+import Events from './pages/Events';
+import Metrics from './pages/Metrics';
 
 const NAV = [
   ['dashboard', 'Dashboard'], ['orders', 'Orders'], ['inventory', 'Inventory & Shipments'], ['pickers', 'Pickers'],
-  ['exceptions', 'Exceptions'], ['queue', 'Approvals & Escalations'], ['planner', 'Shift Planner'], ['audit', 'Audit Log'],
+  ['exceptions', 'Exceptions'], ['queue', 'Approvals & Escalations'], ['planner', 'Shift Planner'], ['events', 'Events & Automation'], ['audit', 'Audit Log'], ['metrics', 'Metrics & Evaluation'],
   ['scenarios', 'Scenarios & Tests'], ['policies', 'Policies (SOP)'],
 ] as const;
 type Page = (typeof NAV)[number][0];
@@ -99,7 +101,9 @@ export default function App() {
           {page === 'exceptions' && <Exceptions />}
           {page === 'queue' && <Queue />}
           {page === 'planner' && <Planner />}
+          {page === 'events' && <Events />}
           {page === 'audit' && <Audit />}
+          {page === 'metrics' && <Metrics />}
           {page === 'scenarios' && <Scenarios />}
           {page === 'policies' && <Policies />}
         </main>
