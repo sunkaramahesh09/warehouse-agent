@@ -41,7 +41,8 @@
 | **v1.0-core** | tag `v1.0-core` (commit `0258da2`, pushed to GitHub) | `17feacdc-8788-46e4-81f2-c7980d7a1fb2` | Complete core submission: all MUST requirements, 50 tests, 18/18 scenarios, deployed and verified |
 | **v1.1-optional** | tag `v1.1-optional` (merge `2155a87`) | `a575f534-6b17-4883-aa8e-c0f0c854b306` | + event-driven automation, metrics/eval, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios |
 | **ui-redesign-start** | tag `ui-redesign-start` (= v1.1 + runbook) | `a575f534…` | Last state before the UI redesign |
-| **v1.2-ui** (current `main`) | tag `v1.2-ui` | `ca2bf997-a901-4b9e-959c-6be83f46ed92` | Presentation-layer redesign (docs/UI_REDESIGN_PLAN.md) + approved `useApi` race fix; backend unchanged |
+| **v1.2-ui** | tag `v1.2-ui` | `ca2bf997-a901-4b9e-959c-6be83f46ed92` | Presentation-layer redesign (docs/UI_REDESIGN_PLAN.md) + approved `useApi` race fix; backend unchanged |
+| **v1.2.1-ui** (current `main`) | tag `v1.2.1-ui` | `25506de5-8063-4764-9b46-dd69f46f5112` | Fixed sidebar: only the main panel scrolls |
 
 Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
