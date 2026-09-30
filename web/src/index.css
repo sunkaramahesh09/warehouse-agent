@@ -48,7 +48,7 @@ h1, h2, h3 { @apply text-navy; }
 .btn-sm { @apply px-2.5 py-1.5 text-xs; }
 
 /* ---------- surfaces & inputs ---------- */
-.card { @apply bg-white rounded-2xl border border-line; box-shadow: var(--shadow-card); }
+.card { @apply min-w-0 bg-white rounded-2xl border border-line; box-shadow: var(--shadow-card); }
 .input { @apply rounded-lg border border-line bg-white px-3 py-2 text-sm text-navy shadow-sm placeholder:text-slate-400 hover:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400; }
 .mono { @apply font-mono text-xs; }
 .label-xs { @apply text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
