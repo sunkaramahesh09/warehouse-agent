@@ -7,6 +7,7 @@ import { api, getRole, setRole, notifyChanged, type Role } from './api';
 import { useApi, useAction } from './hooks';
 import { ErrorBox, Spinner, hhmm, type Icon } from './components/ui';
 import { Illustration } from './components/Illustration';
+import { Logo } from './components/Logo';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Inventory from './pages/Inventory';
@@ -34,13 +35,13 @@ const currentPage = (): Page => {
   return NAV.find(([k]) => k === h)?.[0] ?? 'dashboard';
 };
 
-function Brand() {
+function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <a href="#/dashboard" className="flex shrink-0 items-center gap-3 whitespace-nowrap">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-lg font-bold text-white shadow-sm">W</div>
+      <Logo size={42} className="shrink-0 drop-shadow-sm" title="" />
       <div className="leading-tight">
         <div className="text-[17px] font-bold text-navy">Warehouse Ops</div>
-        <div className="text-xs text-slate-500">Exception Resolver + Shift Planner</div>
+        {!compact && <div className="text-xs text-slate-500">Exception Resolver + Shift Planner</div>}
       </div>
     </a>
   );
@@ -108,7 +109,7 @@ export default function App() {
       <header className="relative z-30 shrink-0 border-b border-line bg-white">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-5">
           <button className="btn-secondary btn-sm lg:hidden" onClick={() => setNavOpen(true)} aria-label="Open navigation"><Menu className="h-4 w-4" /></button>
-          <div className="lg:w-[236px]"><Brand /></div>
+          <div className="shrink-0 lg:min-w-[236px] lg:pr-3"><Brand /></div>
 
           {/* Always-visible simulation notice (required). */}
           <div className="order-last flex w-full min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 min-[1400px]:order-none min-[1400px]:w-auto min-[1400px]:flex-1" role="note">
@@ -157,7 +158,7 @@ export default function App() {
           <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
             <button className="absolute inset-0 bg-navy/30" onClick={() => setNavOpen(false)} aria-label="Close navigation" />
             <div className="absolute inset-y-0 left-0 w-72 overflow-y-auto bg-canvas p-3 shadow-xl">
-              <div className="mb-3 flex items-center justify-between"><Brand /><button className="btn-secondary btn-sm" onClick={() => setNavOpen(false)} aria-label="Close navigation"><X className="h-4 w-4" /></button></div>
+              <div className="mb-3 flex items-center justify-between gap-2"><Brand compact /><button className="btn-secondary btn-sm" onClick={() => setNavOpen(false)} aria-label="Close navigation"><X className="h-4 w-4" /></button></div>
               {nav}
             </div>
           </div>
