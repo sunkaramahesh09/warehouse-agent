@@ -28,7 +28,7 @@ export default function Queue() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={ClipboardCheck} crumb="Approvals & Escalations" illustration="warehouse" title="Approvals & Escalations"
+      <PageHeader photo="queue" icon={ClipboardCheck} crumb="Approvals & Escalations" title="Approvals & Escalations"
         subtitle="Operators approve or reject proposed actions (nothing executes without it). Exception Reviewers resolve escalations. Switch role in the header." />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

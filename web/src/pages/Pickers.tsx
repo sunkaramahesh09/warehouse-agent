@@ -37,7 +37,7 @@ export default function Pickers() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={Users} crumb="Pickers" illustration="warehouse" title="Pickers"
+      <PageHeader photo="pickers" icon={Users} crumb="Pickers" title="Pickers"
         subtitle="Capacity is productive minutes this shift; consumed minutes grow as the simulated clock advances. After changing availability, replan from the Shift Planner." />
       <ErrorBox operation={act.busy ? undefined : 'Change picker availability'} msg={act.error} />
 

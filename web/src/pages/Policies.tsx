@@ -28,7 +28,7 @@ export default function Policies() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={BookOpen} crumb="Policies (SOP)" illustration="warehouse" title="Shared SOP / policy store"
+      <PageHeader photo="policies" icon={BookOpen} crumb="Policies (SOP)" title="Shared SOP / policy store"
         subtitle={<>One source (policies table, seeded from <span className="font-mono">sop.json</span>). Both workflows retrieve from it via <span className="font-mono text-teal-800">search_policies</span> / <span className="font-mono text-teal-800">get_policy</span>, and read their parameters from it.</>} />
 
       <div className="card flex flex-wrap items-center gap-2 p-3">

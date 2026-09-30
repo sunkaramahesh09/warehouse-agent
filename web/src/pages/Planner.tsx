@@ -65,7 +65,7 @@ export default function Planner() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={CalendarClock} crumb="Shift Planner" illustration="warehouse" title="Shift Planner"
+      <PageHeader photo="planner" icon={CalendarClock} crumb="Shift Planner" title="Shift Planner"
         subtitle={<>Deterministic scheduler (<span className="font-mono text-teal-800">SOP-PLN-001/002/003</span>) over the shared state. The LLM may explain the plan; it never does the arithmetic. Simulated time: <b className="font-mono text-navy">{hhmm(meta.data?.sim.sim_now)}</b></>}
         actions={<>
           <Select label="Planning strategy (SOP-PLN-002)" className="w-52" value={strategy} onChange={(v) => setStrategy(v as any)} options={[{ value: 'greedy', label: 'Greedy (SOP default)' }, { value: 'local_search', label: 'Greedy + local search' }]} />

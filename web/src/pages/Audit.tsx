@@ -27,7 +27,7 @@ export default function Audit() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={ScrollText} crumb="Audit Log" title="Audit Log"
+      <PageHeader photo="audit" icon={ScrollText} crumb="Audit Log" title="Audit Log"
         subtitle="Sequence-ordered trail of every tool call, decision, approval, state change, escalation, plan change and failure. Inputs are sanitised (secret-looking keys redacted)."
         actions={<a className="btn-secondary" href="/api/audit/export.jsonl"><Download className="h-4 w-4" aria-hidden />Export JSONL</a>} />
 

@@ -47,7 +47,7 @@ export default function Events() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={Zap} crumb="Events & Automation" illustration="warehouse" title="Events & Automation"
+      <PageHeader photo="events" icon={Zap} crumb="Events & Automation" title="Events & Automation"
         subtitle="Every state change writes a domain event in the same transaction (outbox). The dispatcher routes events to automation handlers after each request. Automation reuses the guarded resolver and planner — it never approves anything." />
       {act.error && <ErrorBox operation={act.busy === 'cc' ? 'Record cycle count' : 'Automation request'} msg={act.error} />}
 

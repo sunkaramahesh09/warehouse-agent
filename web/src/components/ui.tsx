@@ -121,14 +121,26 @@ export function Stat({ label, value, tone = 'slate', hint }: { label: string; va
 }
 
 // ------------------------------------------------------------------ page header
-export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside }: {
-  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode;
+/** Photo banners (royalty-free stock photos, see docs/UI_REDESIGN_PLAN.md §7.7d); one per page. */
+export type HeroPhoto = 'dashboard' | 'orders' | 'inventory' | 'pickers' | 'exceptions' | 'queue' | 'planner' | 'events' | 'audit' | 'metrics' | 'scenarios' | 'policies';
+
+export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside, photo }: {
+  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode; photo?: HeroPhoto;
 }) {
   return (
-    <div className="relative mb-5 overflow-hidden rounded-2xl">
-      {illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
+    <div className={`relative mb-5 overflow-hidden rounded-2xl ${photo ? 'lg:-mx-2 lg:-mt-2 lg:min-h-[184px] lg:px-2 lg:pt-2' : ''}`}>
+      {photo && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[52%] lg:block xl:w-[56%]" aria-hidden>
+          <img src={`/hero/${photo}.webp`} alt="" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
+          {/* soft fade into the page canvas (left, bottom, top) — overlays render identically in every browser */}
+          <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/55 via-35% to-transparent to-75%" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/20 via-30% to-transparent to-55%" />
+          <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-canvas/70 to-transparent" />
+        </div>
+      )}
+      {!photo && illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
       <div className="relative flex flex-wrap items-end justify-between gap-4 py-1">
-        <div className="min-w-0 max-w-3xl">
+        <div className={`min-w-0 ${photo ? 'max-w-3xl lg:max-w-[52%] xl:max-w-[48%]' : 'max-w-3xl'}`}>
           {crumb && (
             <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-teal-800">
               {I && <I className="h-4 w-4" aria-hidden />}{crumb}
@@ -137,7 +149,7 @@ export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustrat
           <h1 className="text-[28px] font-bold leading-tight tracking-tight text-navy md:text-[32px]">{title}</h1>
           {subtitle && <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
         </div>
-        {(aside || actions) && <div className={`relative flex flex-wrap items-center gap-2 ${illustration ? 'xl:rounded-2xl xl:bg-white/85 xl:p-2 xl:shadow-sm xl:ring-1 xl:ring-line xl:backdrop-blur' : ''}`}>{aside}{actions}</div>}
+        {(aside || actions) && <div className={`relative flex flex-wrap items-center gap-2 ${photo || illustration ? 'lg:rounded-2xl lg:bg-white/85 lg:p-2 lg:shadow-sm lg:ring-1 lg:ring-line lg:backdrop-blur' : ''}`}>{aside}{actions}</div>}
       </div>
     </div>
   );

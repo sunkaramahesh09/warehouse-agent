@@ -51,7 +51,7 @@ export default function Exceptions() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={TriangleAlert} crumb="Exceptions" illustration="warehouse" title="Exceptions"
+      <PageHeader photo="exceptions" icon={TriangleAlert} crumb="Exceptions" title="Exceptions"
         subtitle="Investigate runs the Exception Resolver: read-only tool calls → evidence → shared SOP → guarded decision → controlled action or escalation."
         actions={<Select label="Agent mode" hideLabel={false} className="w-56" value={mode} onChange={(v) => setMode(v as any)} options={[
           { value: 'auto', label: `auto (${llmOn ? 'LLM' : 'deterministic'})` }, { value: 'deterministic', label: 'deterministic' }, { value: 'llm', label: `LLM${llmOn ? '' : ' (no key)'}`, disabled: !llmOn },

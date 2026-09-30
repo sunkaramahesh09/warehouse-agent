@@ -43,7 +43,7 @@ export default function Inventory() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={Boxes} crumb="Inventory & Shipments" illustration="warehouse" title="Inventory & Shipments"
+      <PageHeader photo="inventory" icon={Boxes} crumb="Inventory & Shipments" title="Inventory & Shipments"
         subtitle={<>Available = on_hand − reserved (generated column). A newer, lower cycle count supersedes system on_hand for exception decisions (<span className="font-mono text-teal-800">SOP-SOT-001</span>).</>} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

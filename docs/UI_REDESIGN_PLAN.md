@@ -35,7 +35,7 @@ They are **mockups with placeholder data**. The following are *not* copied, beca
 | Event types `INVENTORY_UPDATED`, `ORDER_UPDATED` | Don't exist | Real `DomainEventType` names |
 | "Start guided demo", "Manage pickers", audit "Last 1h/6h" time presets | No such feature/semantics | Not added (no decorative buttons) |
 | Stock "Healthy/Low/Critical" with invented thresholds | Thresholds are not policy | A stock bar = `available / on_hand` (a visualisation of existing values) plus a **"short vs open demand"** flag computed from real `/api/orders` demand vs `effective_available`, labelled as such |
-| Stock photos / branded imagery | Copyright + weight | Original lightweight inline-SVG warehouse illustrations (shelves, boxes, forklift), `aria-hidden`, hidden on small screens |
+| Stock photos / branded imagery | Copyright + weight | Initially original inline-SVG illustrations. **Later, at the user's request, replaced by licensed royalty-free photos (§7.7d)**; no branded imagery |
 
 Client-side-only additions that just re-present data already returned (search boxes, filters, pagination, tabs, table/card toggles) are allowed: they don't change any data or behaviour.
 
@@ -132,6 +132,9 @@ The sidebar was `sticky; height: 100vh` but started below a header that scrolls 
 
 ### 7.7c Follow-up: logo
 The "W" letter tile was replaced by an original mark (`web/src/components/Logo.tsx`): a warehouse roof over palletised parcels on the teal brand tile. The amber parcel is the "exception needs attention" cue and the white parcels are planned work. Three variants were drafted and rendered at 128/64/40/16 px; the one chosen stays legible at favicon size. It is used in the header brand and the mobile drawer (compact brand, no subtitle), and as `/favicon.svg` with `theme-color`. It is decorative next to the wordmark (`aria-hidden`). The header brand slot now grows with its content.
+
+### 7.7d Follow-up: realistic page-header photos
+At the user's request the SVG header illustrations were replaced by **real warehouse photos, a different one per page**, matching the reference screenshots. There is no image-generation tool in this environment, so these are royalty-free Unsplash / Pexels photos (Unsplash / Pexels licences: free commercial use, no attribution required; credited in `docs/PHOTO_CREDITS.md`). Every candidate was inspected at full size and those with visible brands were rejected (forklift maker logos, a soft-drink brand, carrier/postal labels, apparel logos). Premium photos were skipped. Photos are cropped per subject, WebP 38–149 KB, one per page, decorative (`alt=""`, `aria-hidden`), shown from 1024 px wide, and faded into the canvas with gradient overlays (not CSS masks, which composite inconsistently across browsers). The header text column is width-limited so it never runs over the photo. The full demo regression and the 12-page layout check still pass.
 
 ### 7.8 Functional changes
 Only the approved `useApi` fix above. Additions are presentation-only: client-side search/filter/pagination/tabs over already-fetched data, the opt-in `wrap` badge variant, `aria-label`s, the auto-switch to the planner "Changes" tab after a replan, and derived display values that recompute nothing the backend owns (e.g. "short vs open demand" = remaining quantity of PENDING/PICKING orders vs the backend's `effective_available`, labelled as such; deadline "overdue" = deadline before the simulated clock).

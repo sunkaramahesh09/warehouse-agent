@@ -36,7 +36,7 @@ export default function Orders() {
 
   return (
     <div className="space-y-5">
-      <PageHeader icon={Package} crumb="Orders" illustration="warehouse" title="Orders"
+      <PageHeader photo="orders" icon={Package} crumb="Orders" title="Orders"
         subtitle="Order headers, lines and linked records. Inventory readiness comes from the active plan (planner's deterministic check)." />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
