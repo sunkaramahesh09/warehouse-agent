@@ -100,13 +100,16 @@ export function Card({ title, actions, children, className = '' }: { title?: Rea
 export function StatCard({ icon: I, label, value, hint, tone = 'slate', active = false, title }: {
   icon?: Icon; label: string; value: ReactNode; hint?: ReactNode; tone?: string; active?: boolean; title?: string;
 }) {
+  // Container query: side-by-side when the card is wide enough, stacked (never truncated) when narrow.
   return (
-    <div className={`card flex items-center gap-3.5 px-4 py-3.5 ${active ? 'ring-2 ring-teal-600/30' : ''}`} title={title}>
-      {I && <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${ICON_TILE[tone] ?? ICON_TILE.slate}`}><I className="h-5 w-5" aria-hidden /></div>}
-      <div className="min-w-0">
-        <div className={`text-2xl font-bold leading-tight tabular-nums ${VALUE_COLOR[tone] ?? VALUE_COLOR.slate}`}>{value}</div>
-        <div className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-600">{label}</div>
-        {hint && <div className="line-clamp-2 text-xs leading-snug text-slate-400">{hint}</div>}
+    <div className={`card @container px-4 py-3.5 ${active ? 'ring-2 ring-teal-600/30' : ''}`} title={title}>
+      <div className="flex flex-col gap-2 @[210px]:flex-row @[210px]:items-center @[210px]:gap-3.5">
+        {I && <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl @[210px]:h-11 @[210px]:w-11 ${ICON_TILE[tone] ?? ICON_TILE.slate}`}><I className="h-[18px] w-[18px] @[210px]:h-5 @[210px]:w-5" aria-hidden /></div>}
+        <div className="min-w-0">
+          <div className={`text-2xl font-bold leading-tight tabular-nums ${VALUE_COLOR[tone] ?? VALUE_COLOR.slate}`}>{value}</div>
+          <div className="text-[13px] font-medium leading-snug text-slate-600">{label}</div>
+          {hint && <div className="text-xs leading-snug text-slate-400">{hint}</div>}
+        </div>
       </div>
     </div>
   );

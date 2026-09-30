@@ -39,7 +39,7 @@ export default function Orders() {
       <PageHeader icon={Package} crumb="Orders" illustration="warehouse" title="Orders"
         subtitle="Order headers, lines and linked records. Inventory readiness comes from the active plan (planner's deterministic check)." />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <StatCard icon={Package} tone="sky" label="Total orders" value={all.length} />
         <StatCard icon={ClipboardList} tone="emerald" label="Pending / picking" value={`${count('PENDING')} / ${count('PICKING')}`} />
         <StatCard icon={Lock} tone="amber" label="On hold (blocked)" value={count('ON_HOLD')} />
