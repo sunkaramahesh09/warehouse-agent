@@ -55,7 +55,7 @@ export default function App() {
   const reset = useAction();
 
   useEffect(() => {
-    const on = () => { setPage(currentPage()); setNavOpen(false); window.scrollTo(0, 0); };
+    const on = () => { setPage(currentPage()); setNavOpen(false); document.getElementById('main')?.scrollTo(0, 0); };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
@@ -76,7 +76,7 @@ export default function App() {
           return (
             <li key={k}>
               <a href={`#/${k}`} aria-current={on ? 'page' : undefined}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${on ? 'bg-teal-50 text-teal-900 ring-1 ring-teal-100' : 'text-slate-600 hover:bg-white hover:text-navy'}`}>
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition [@media(max-height:800px)]:py-2 ${on ? 'bg-teal-50 text-teal-900 ring-1 ring-teal-100' : 'text-slate-600 hover:bg-white hover:text-navy'}`}>
                 <I className={`h-[18px] w-[18px] shrink-0 ${on ? 'text-teal-700' : 'text-slate-400 group-hover:text-slate-600'}`} aria-hidden />
                 <span className="flex-1 leading-tight">{label}</span>
                 {badge[k] > 0 && <span className="rounded-full bg-rose-500 px-1.5 py-px text-[10px] font-bold text-white" aria-label={`${badge[k]} open`}>{badge[k]}</span>}
@@ -85,13 +85,15 @@ export default function App() {
           );
         })}
       </ul>
-      <div className="mt-auto pt-6">
-        <Illustration kind="warehouse" className="mx-auto -mb-3 h-20 w-full opacity-70" />
-        <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+      <div className="mt-auto pt-6 [@media(max-height:760px)]:hidden">
+        <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+          <div className="border-b border-line bg-gradient-to-b from-sky-50/80 to-white px-3 pt-2 [@media(max-height:880px)]:hidden"><Illustration kind="warehouse" className="mx-auto block h-[72px] w-full" /></div>
+          <div className="p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-teal-900"><ShieldCheck className="h-4 w-4 text-teal-700" aria-hidden />One shared environment</div>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">The Exception Resolver writes to it; the Shift Planner reads from it.</p>
           <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />All actions are logged
+          </div>
           </div>
         </div>
       </div>
@@ -99,17 +101,17 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
 
       {/* ---------------- header ---------------- */}
-      <header className="relative z-30 border-b border-line bg-white">
+      <header className="relative z-30 shrink-0 border-b border-line bg-white">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-5">
           <button className="btn-secondary btn-sm lg:hidden" onClick={() => setNavOpen(true)} aria-label="Open navigation"><Menu className="h-4 w-4" /></button>
           <div className="lg:w-[236px]"><Brand /></div>
 
           {/* Always-visible simulation notice (required). */}
-          <div className="order-last flex w-full min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 xl:order-none xl:w-auto xl:flex-1" role="note">
+          <div className="order-last flex w-full min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 min-[1400px]:order-none min-[1400px]:w-auto min-[1400px]:flex-1" role="note">
             <CircleAlert className="mt-px h-4 w-4 shrink-0 text-amber-600" aria-hidden />
             <span><b className="font-semibold">SIMULATED ENVIRONMENT</b> — fictional data, no connection to any real warehouse, carrier or customer system. All actions are simulated.</span>
           </div>
@@ -147,9 +149,9 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex min-h-0 flex-1">
         {/* ---------------- sidebar ---------------- */}
-        <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 overflow-y-auto border-r border-line bg-canvas/60 px-3 py-4 lg:block">{nav}</aside>
+        <aside className="hidden w-[260px] shrink-0 overflow-y-auto overscroll-contain border-r border-line bg-canvas/60 px-3 py-4 lg:block">{nav}</aside>
 
         {navOpen && (
           <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
@@ -161,7 +163,7 @@ export default function App() {
           </div>
         )}
 
-        <main id="main" className="min-w-0 flex-1 px-4 py-5 md:px-6 lg:px-8 lg:py-6">
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 outline-none md:px-6 lg:px-8 lg:py-6">
           {reset.error && <div className="mb-4"><ErrorBox operation="Reset environment" msg={reset.error} /></div>}
           {page === 'dashboard' && <Dashboard />}
           {page === 'orders' && <Orders />}
