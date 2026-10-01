@@ -44,7 +44,8 @@
 | **v1.2-ui** | tag `v1.2-ui` | `ca2bf997-a901-4b9e-959c-6be83f46ed92` | Presentation-layer redesign (docs/UI_REDESIGN_PLAN.md) + approved `useApi` race fix; backend unchanged |
 | **v1.2.1-ui** | tag `v1.2.1-ui` | `25506de5-8063-4764-9b46-dd69f46f5112` | Fixed sidebar: only the main panel scrolls |
 | **v1.2.2-ui** | tag `v1.2.2-ui` | `d973bccb-90a3-4b63-8cfa-54352e5c8982` | Original logo mark + SVG favicon |
-| **v1.2.3-ui** (current `main`) | tag `v1.2.3-ui` | `0308e449-d3d6-427d-add0-a567514765a3` | Realistic per-page header photos (docs/PHOTO_CREDITS.md) |
+| **v1.2.3-ui** | tag `v1.2.3-ui` | `0308e449-d3d6-427d-add0-a567514765a3` (removed) | Realistic per-page header photos (photos since removed) |
+| **v1.2.4-ui** (current `main`) | tag `v1.2.4-ui` | `5ec9c6a8-3e4e-4cc1-ad31-b70b76ba2289` | Photos replaced by original isometric SVG header art (`web/src/components/HeroArt.tsx`, UI_REDESIGN_PLAN §7.7e) |
 
 Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
