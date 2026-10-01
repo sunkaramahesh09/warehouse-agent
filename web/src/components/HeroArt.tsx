@@ -431,18 +431,20 @@ function useTilt(ref: React.RefObject<SVGSVGElement | null>, enabled: boolean) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const fg = Array.from(svg.querySelectorAll<SVGGElement>('[data-depth="fg"]'));
     const bg = Array.from(svg.querySelectorAll<SVGGElement>('[data-depth="bg"]'));
-    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+    // intensity: max tilt (deg), scene shift / chip shift / glow counter-shift (px), hover lift (scale)
+    const ROT = 10, MOVE = 8, FG = 14, BG = 8, LIFT = 0.02;
+    let tx = 0, ty = 0, th = 0, cx = 0, cy = 0, ch = 0, raf = 0;
 
     const apply = () => {
-      const moving = Math.abs(cx) > 0.001 || Math.abs(cy) > 0.001;
-      svg.style.transform = moving ? `perspective(900px) rotateX(${(-cy * 5).toFixed(3)}deg) rotateY(${(cx * 5).toFixed(3)}deg) translate3d(${(cx * 4).toFixed(2)}px, ${(cy * 4).toFixed(2)}px, 0)` : '';
+      const moving = Math.abs(cx) > 0.001 || Math.abs(cy) > 0.001 || ch > 0.001;
+      svg.style.transform = moving ? `perspective(700px) rotateX(${(-cy * ROT).toFixed(3)}deg) rotateY(${(cx * ROT).toFixed(3)}deg) translate3d(${(cx * MOVE).toFixed(2)}px, ${(cy * MOVE).toFixed(2)}px, 0) scale(${(1 + ch * LIFT).toFixed(4)})` : '';
       svg.style.willChange = moving ? 'transform' : '';
-      for (const g of fg) g.style.transform = moving ? `translate(${(cx * 5).toFixed(2)}px, ${(cy * 4).toFixed(2)}px)` : '';
-      for (const g of bg) g.style.transform = moving ? `translate(${(-cx * 3).toFixed(2)}px, ${(-cy * 2).toFixed(2)}px)` : '';
+      for (const g of fg) g.style.transform = moving ? `translate(${(cx * FG).toFixed(2)}px, ${(cy * FG * 0.8).toFixed(2)}px)` : '';
+      for (const g of bg) g.style.transform = moving ? `translate(${(-cx * BG).toFixed(2)}px, ${(-cy * BG * 0.6).toFixed(2)}px)` : '';
     };
     const tick = () => {
-      cx += (tx - cx) * 0.09; cy += (ty - cy) * 0.09; // eased follow, no jumps
-      if (Math.abs(tx - cx) < 0.0005 && Math.abs(ty - cy) < 0.0005) { cx = tx; cy = ty; raf = 0; } else raf = requestAnimationFrame(tick);
+      cx += (tx - cx) * 0.1; cy += (ty - cy) * 0.1; ch += (th - ch) * 0.1; // eased follow, no jumps
+      if (Math.abs(tx - cx) < 0.0005 && Math.abs(ty - cy) < 0.0005 && Math.abs(th - ch) < 0.0005) { cx = tx; cy = ty; ch = th; raf = 0; } else raf = requestAnimationFrame(tick);
       apply();
     };
     const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
@@ -452,10 +454,11 @@ function useTilt(ref: React.RefObject<SVGSVGElement | null>, enabled: boolean) {
       const inside = r.width > 0 && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       const nx = inside ? ((e.clientX - r.left) / r.width) * 2 - 1 : 0;
       const ny = inside ? ((e.clientY - r.top) / r.height) * 2 - 1 : 0;
-      if (nx !== tx || ny !== ty) { tx = nx; ty = ny; kick(); }
+      const nh = inside ? 1 : 0;
+      if (nx !== tx || ny !== ty || nh !== th) { tx = nx; ty = ny; th = nh; kick(); }
     };
-    const reset = () => { tx = 0; ty = 0; kick(); };
-    const onMotionPref = () => { if (reduced.matches) { tx = ty = cx = cy = 0; cancelAnimationFrame(raf); raf = 0; apply(); } };
+    const reset = () => { tx = 0; ty = 0; th = 0; kick(); };
+    const onMotionPref = () => { if (reduced.matches) { tx = ty = th = cx = cy = ch = 0; cancelAnimationFrame(raf); raf = 0; apply(); } };
     // the art sits under the (pointer-transparent) header text layer, so hit-test against its own box
     document.addEventListener('pointermove', onMove, { passive: true });
     document.documentElement.addEventListener('pointerleave', reset);
@@ -467,7 +470,7 @@ function useTilt(ref: React.RefObject<SVGSVGElement | null>, enabled: boolean) {
       window.removeEventListener('blur', reset);
       reduced.removeEventListener('change', onMotionPref);
       cancelAnimationFrame(raf);
-      tx = ty = cx = cy = 0; apply();
+      tx = ty = th = cx = cy = ch = 0; apply();
     };
   }, [ref, enabled]);
 }
