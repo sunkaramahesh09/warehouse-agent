@@ -7,7 +7,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 31776,
+    "ms": 45882,
     "checks": [
       {
         "name": "outcome",
@@ -66,7 +66,7 @@
     "verdict": "PASS",
     "passed": 10,
     "total": 10,
-    "ms": 26314,
+    "ms": 39261,
     "checks": [
       {
         "name": "outcome",
@@ -143,7 +143,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 30030,
+    "ms": 27291,
     "checks": [
       {
         "name": "outcome",
@@ -190,7 +190,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 18532,
+    "ms": 28483,
     "checks": [
       {
         "name": "outcome",
@@ -237,7 +237,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 19028,
+    "ms": 32809,
     "checks": [
       {
         "name": "outcome",
@@ -284,7 +284,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 22216,
+    "ms": 21711,
     "checks": [
       {
         "name": "outcome",
@@ -325,7 +325,7 @@
     "verdict": "PASS",
     "passed": 6,
     "total": 6,
-    "ms": 29896,
+    "ms": 41708,
     "checks": [
       {
         "name": "outcome",
@@ -378,7 +378,7 @@
     "verdict": "PASS",
     "passed": 10,
     "total": 10,
-    "ms": 142,
+    "ms": 159,
     "checks": [
       {
         "name": "plan created",
@@ -442,7 +442,7 @@
       }
     ],
     "notes": null,
-    "setup": "Baseline: 10 plannable orders, 4 available pickers (P-05 out sick), uneven capacities, COLD/BULKY skills, 2 in-progress orders.",
+    "setup": "Baseline: 13 plannable orders (11 pending, 2 in progress), 4 available pickers (P-05 out sick), uneven capacities, COLD/BULKY skills, 2 in-progress orders.",
     "trigger": "Generate plan (INITIAL)",
     "expected": "Deterministic plan: no unavailable picker used, capacity never exceeded, in-progress kept, ORD-1014 infeasible (capacity), ORD-1015 blocked (inventory), ORD-1009 blocked (invalid data).",
     "boundary": "Arithmetic and feasibility in deterministic code only."
@@ -455,7 +455,7 @@
     "verdict": "PASS",
     "passed": 8,
     "total": 8,
-    "ms": 139,
+    "ms": 149,
     "checks": [
       {
         "name": "v2 created from v1",
@@ -520,7 +520,7 @@
     "verdict": "PASS",
     "passed": 6,
     "total": 6,
-    "ms": 120,
+    "ms": 132,
     "checks": [
       {
         "name": "urgent order assigned",
@@ -573,7 +573,7 @@
     "verdict": "PASS",
     "passed": 6,
     "total": 6,
-    "ms": 44199,
+    "ms": 37187,
     "checks": [
       {
         "name": "v1: ORD-1004 schedulable before investigation",
@@ -626,7 +626,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 54501,
+    "ms": 73333,
     "checks": [
       {
         "name": "first run outcome",
@@ -685,7 +685,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 88194,
+    "ms": 55835,
     "checks": [
       {
         "name": "outcome",
@@ -726,7 +726,7 @@
     "verdict": "PASS",
     "passed": 7,
     "total": 7,
-    "ms": 81647,
+    "ms": 52413,
     "checks": [
       {
         "name": "first hold applied",
@@ -785,7 +785,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 24023,
+    "ms": 34341,
     "checks": [
       {
         "name": "approval expired",
@@ -826,7 +826,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 170,
+    "ms": 180,
     "checks": [
       {
         "name": "dispatch blocked and audited",
@@ -867,7 +867,7 @@
     "verdict": "PASS",
     "passed": 4,
     "total": 4,
-    "ms": 98,
+    "ms": 112,
     "checks": [
       {
         "name": "run status",
@@ -908,7 +908,7 @@
     "verdict": "PASS",
     "passed": 5,
     "total": 5,
-    "ms": 99,
+    "ms": 109,
     "checks": [
       {
         "name": "fabricated citation rejected",
@@ -946,5 +946,159 @@
     "trigger": "Investigate EXC-2002 with the scripted model",
     "expected": "Fabricated citation rejected; prohibited/approval-gated actions not executed; decision overridden to REQUEST_APPROVAL; ORD-1011 not cancelled.",
     "boundary": "The LLM is never the authority for an action."
+  },
+  {
+    "id": "event-driven",
+    "title": "Event-driven: cycle count → detect → auto-investigate → auto-replan",
+    "category": "integration",
+    "mode": "llm",
+    "verdict": "PASS",
+    "passed": 11,
+    "total": 11,
+    "ms": 95574,
+    "checks": [
+      {
+        "name": "cycle count recorded",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "detector flagged exactly the unfulfillable orders",
+        "expected": "ORD-1002,ORD-1016",
+        "actual": "ORD-1002,ORD-1016",
+        "pass": true
+      },
+      {
+        "name": "both auto-investigated → held & escalated",
+        "expected": "ESCALATED,ESCALATED",
+        "actual": "ESCALATED,ESCALATED",
+        "pass": true
+      },
+      {
+        "name": "orders held by their exceptions",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "holds coalesced into ONE replan (v2)",
+        "expected": "v2",
+        "actual": "v2",
+        "pass": true
+      },
+      {
+        "name": "ORD-1002 blocked by new exception",
+        "expected": "EXC-3001",
+        "actual": "EXC-3001",
+        "pass": true
+      },
+      {
+        "name": "ORD-1016 blocked by new exception",
+        "expected": "EXC-3002",
+        "actual": "EXC-3002",
+        "pass": true
+      },
+      {
+        "name": "no events left pending",
+        "expected": "0",
+        "actual": "0",
+        "pass": true
+      },
+      {
+        "name": "automation never executed an approval",
+        "expected": "0",
+        "actual": "0",
+        "pass": true
+      },
+      {
+        "name": "automation OFF: events skipped",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "automation OFF: no new plan",
+        "expected": "2",
+        "actual": "2",
+        "pass": true
+      }
+    ],
+    "notes": "resolver runs: auto-investigate RUN-4C4A92CE:llm; auto-investigate RUN-C4FCB426:llm->deterministic",
+    "setup": "Plan v1 active. Automation ON (auto_detect, auto_investigate, auto_replan). SKU-003@B-01: system on_hand 40, reserved 5.",
+    "trigger": "Cycle count records only 12 × SKU-003 at B-01 (effective 7). Then automation OFF and a second count.",
+    "expected": "Detector raises shortfalls for ORD-1002 (needs 10) and ORD-1016 (needs 8) but not ORD-1009 (5); both are auto-investigated (hold + escalation, never approval); holds are coalesced into ONE replan where both are BLOCKED by their new exceptions. With automation off, events are SKIPPED and no plan is created.",
+    "boundary": "Automation reuses the same guarded resolver and tools; it never approves anything."
+  },
+  {
+    "id": "optimizer",
+    "title": "Advanced scheduling: local search vs greedy",
+    "category": "planner",
+    "mode": "llm",
+    "verdict": "PASS",
+    "passed": 9,
+    "total": 9,
+    "ms": 305,
+    "checks": [
+      {
+        "name": "optimizer ran",
+        "expected": "local_search",
+        "actual": "local_search",
+        "pass": true
+      },
+      {
+        "name": "objective never worse",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "same orders scheduled as greedy",
+        "expected": "ORD-1001,ORD-1002,ORD-1004,ORD-1005,ORD-1006,ORD-1010,ORD-1011,ORD-1016,ORD-1017,ORD-1018",
+        "actual": "ORD-1001,ORD-1002,ORD-1004,ORD-1005,ORD-1006,ORD-1010,ORD-1011,ORD-1016,ORD-1017,ORD-1018",
+        "pass": true
+      },
+      {
+        "name": "in-progress work untouched",
+        "expected": "ORD-1005:P-01,ORD-1018:P-02",
+        "actual": "ORD-1005:P-01,ORD-1018:P-02",
+        "pass": true
+      },
+      {
+        "name": "capacity respected",
+        "expected": "0",
+        "actual": "0",
+        "pass": true
+      },
+      {
+        "name": "unavailable picker unused",
+        "expected": "false",
+        "actual": "false",
+        "pass": true
+      },
+      {
+        "name": "makespan not increased",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "every move explained in rationale",
+        "expected": "true",
+        "actual": "true",
+        "pass": true
+      },
+      {
+        "name": "deterministic",
+        "expected": "[[\"ORD-1005\",\"P-01\",1],[\"ORD-1018\",\"P-02\",1],[\"ORD-1001\",\"P-03\",1],[\"ORD-1004\",\"P-03\",2],[\"ORD-1016\",\"P-01\",2],[\"ORD-1002\",\"P-04\",1],[\"ORD-1017\",\"P-04\",2],[\"ORD-1006\",\"P-02\",2],[\"ORD-1010\",\"P-02\",3],[\"ORD-1011\",\"P-03\",3],[\"ORD-1009\",null,null],[\"ORD-1015\",null,null],[\"ORD-1014\",null,null]]",
+        "actual": "[[\"ORD-1005\",\"P-01\",1],[\"ORD-1018\",\"P-02\",1],[\"ORD-1001\",\"P-03\",1],[\"ORD-1004\",\"P-03\",2],[\"ORD-1016\",\"P-01\",2],[\"ORD-1002\",\"P-04\",1],[\"ORD-1017\",\"P-04\",2],[\"ORD-1006\",\"P-02\",2],[\"ORD-1010\",\"P-02\",3],[\"ORD-1011\",\"P-03\",3],[\"ORD-1009\",null,null],[\"ORD-1015\",null,null],[\"ORD-1014\",null,null]]",
+        "pass": true
+      }
+    ],
+    "notes": null,
+    "setup": "Baseline state, planned twice from the same reset: once greedy, once with strategy local_search.",
+    "trigger": "Generate plan (INITIAL) with each strategy",
+    "expected": "Local search never makes the objective worse (SLA risk, lateness, churn, makespan), keeps exactly the same orders scheduled, never moves in-progress work, respects capacity/skills/availability, explains each move, and is deterministic.",
+    "boundary": "Optimizer may only move un-started work and must keep every hard constraint (SOP-PLN-002)."
   }
 ]

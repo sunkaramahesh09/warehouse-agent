@@ -552,7 +552,7 @@ export const SCENARIOS: Scenario[] = [
       await callTool('set_automation', { auto_detect: true, auto_investigate: true, auto_replan: true }, OP);
       const cc = await callTool<any>('record_cycle_count', { sku: 'SKU-003', location_id: 'B-01', counted_qty: 12 }, OP);
       const d = await processEvents({ mode });
-      for (const h of d.handled) if (h.handled_by === 'exception_resolver') runModes.push(`auto-investigate ${(h.result as any).run_id}:${(h.result as any).mode}`);
+      for (const h of d.handled) if (h.handled_by === 'exception_resolver') { const r = h.result as any; runModes.push(`auto-investigate ${r.run_id}:${r.mode}${r.fallback_reason ? ` (fallback: ${r.fallback_reason})` : ''}`); }
       const exc = await many(pool, `SELECT * FROM exceptions WHERE exception_id >= 'EXC-3000' ORDER BY exception_id`);
       const { plan, rows, row } = await activePlan();
       const pending = await one(pool, `SELECT count(*)::int n FROM domain_events WHERE status = 'PENDING'`);

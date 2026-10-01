@@ -2,7 +2,7 @@
 
 > **Purpose:** the single place to see *where the work stopped* and *how to resume* without re-reading the whole codebase. Update the **Status** and **Next steps** sections at the end of every work session.
 
-## 1. Status snapshot (last updated: 2026-09-30, session 1 — optional features)
+## 1. Status snapshot (last updated: 2026-10-01 — pre-submission verification)
 
 | Area | State | Evidence |
 |---|---|---|
@@ -14,18 +14,19 @@
 | Exception Resolver (LLM + deterministic, assessment, guard, orchestrator, approvals) | ✅ done | `server/src/agents/resolver/*` |
 | Planner (pure engine, versioned persistence, replanning, simulation clock) | ✅ done | `server/src/planner/*`, `server/src/tools/planner-tools.ts` |
 | HTTP API + React UI (10 pages) | ✅ done, verified in headless Chromium (no console errors) | `server/src/http/app.ts`, `web/src/*` |
-| Tests | ✅ 50/50 (`npm test`) | `server/test/*` |
-| Scenarios | ✅ 18/18 deterministic, 18/18 Gemini (all runs LLM-driven) | `docs/results/scenario-results*.md` |
+| Tests | ✅ 54/54 (`npm test`) | `server/test/*` |
+| Scenarios | ✅ 20/20 deterministic; 20/20 Gemini (2026-10-01: 15/16 resolver runs LLM-driven, 1 labelled fallback in `event-driven`) | `docs/results/scenario-results*.md` |
 | Audit log examples | ✅ | `docs/results/audit-log-example.*` |
 | Docs (README, ARCHITECTURE, DATA_MODEL, POLICIES, SCENARIOS, FAILURE_MODES, DEMO_SCRIPT, REFLECTION) | ✅ written, URL included | `docs/`, `README.md` |
 | Railway deployment | ✅ live at https://app-production-fd3e.up.railway.app — full demo path verified in a browser with Gemini; environment reset to baseline afterwards | see §4 |
 | GitHub repo push | ✅ public: https://github.com/sunkaramahesh09/warehouse-agent | `git push` after each change |
 | Demo video | ⬜ user to record using `docs/DEMO_SCRIPT.md` | — |
+| Submission PDFs | ✅ `docs/submission/` (Phase 0, deliverable, SOP, reflection, AI tools), rebuilt by `python3 scripts/build-submission-pdfs.py <chrome-headless-shell>` | §2 |
 | Final acceptance checklist | ✅ | §6 |
 | **Optional features** (branch `feature/optional-extras`) | ✅ built: event-driven automation, metrics + eval harness, local-search optimizer, LLM pacing. 54 tests, 20/20 scenarios (det.), eval 100% (det. + Gemini). Deployed to Railway and verified live | `docs/OPTIONAL_FEATURES.md` |
 | Merge optional features to `main` | ✅ merged + tagged `v1.1-optional` | §2a |
 | UI redesign (reference screenshots in docs/ui-reference) | ✅ all 12 pages + shell; verified locally and live | `docs/UI_REDESIGN_PLAN.md` |
-| Clean LLM run of the 2 new scenarios | ⬜ blocked by Gemini free-tier daily quota (500/day, exhausted 2026-09-30). After the reset (midnight Pacific): `DATABASE_URL=…/warehouse_llm LLM_MIN_INTERVAL_MS=4500 npm run scenario -- all --llm`, check that the Agent-runs lines show no fallback, commit | §2 |
+| Clean LLM run of the 2 new scenarios | ✅ done 2026-10-01: full suite 20/20 with Gemini (run twice); `event-driven` alone fully LLM-driven | SCENARIOS.md §Current results |
 
 ## 2. Next steps (in order)
 

@@ -56,15 +56,16 @@ While building the optional features, I ran the LLM evaluation, the LLM scenario
 - **One shared demo database.** Concurrent reviewers share state, and a reset affects everyone. Mutations are serialised in-process, which assumes a single server instance.
 - **LLM variability and quota.** Tool sequences vary between runs. The free tier can rate-limit, in which case runs fall back to deterministic (transparently). Latency is 10–40 s per investigation.
 - **The assessment encodes which policy governs which exception type.** The policy *content and parameters* are shared data, but the mapping from exception type to required policy lives in code. New exception types need code, not just a new SOP.
-- **Greedy planner.** It is not globally optimal and does not split orders across pickers. Travel time is a simple zone-distance model.
+- **Planner optimality.** The default greedy planner is not globally optimal; the opt-in local search (relocate/swap) improves sequencing but is still a heuristic. Neither strategy splits orders across pickers, and travel time is a simple zone-distance model.
 - **Simulated execution** (`advance_clock`) models picking progress linearly, and there is no packing/shipping simulation.
 - Scenario checks cover the seeded cases, not arbitrary data.
 
 ## Next improvements
 
+Event-driven triggers (cycle-count ingestion → detection → auto-investigation → auto-replan), a metrics/evaluation dashboard, and local-search scheduling were on the original list and have since been built (see [OPTIONAL_FEATURES.md](OPTIONAL_FEATURES.md)). What remains:
+
 1. Move the event dispatcher to a background worker with retries/backoff if automation must not add request latency.
-1. Real authentication plus per-role permissions, and per-reviewer sandboxes (a database schema per session) so reviewers don't collide.
-2. Event-driven triggers: exception creation from inventory-count ingestion, with automatic replan on hold/release.
+2. Real authentication plus per-role permissions, and per-reviewer sandboxes (a database schema per session) so reviewers don't collide.
 3. An approval-gated *release hold* and *inventory adjustment* flow initiated from the escalation card.
-4. An evaluation dashboard with metrics over repeated LLM runs (agreement rate with the assessment, override rate, tool calls per case, cost/latency).
-5. A smarter scheduler (local search over sequences, order splitting when the SOP allows) behind the same pure interface.
+4. Order splitting across pickers when the SOP allows it, and a richer travel model, behind the same pure planner interface.
+5. Longer-horizon evaluation: many LLM runs across models and prompts, with cost and latency tracking per run.

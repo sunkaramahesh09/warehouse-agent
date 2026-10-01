@@ -51,7 +51,7 @@
 
 ## Part 9 — Audit and tests (≈1 min)
 17. **Audit Log**: filter on the EXC-2001 run id. It shows RUN_STARTED → TOOL_CALLs → DECISION (policy refs) → STATE_CHANGE hold_order → ESCALATION_CREATED → RUN_COMPLETED. Expand a row for input/result/state changes. Mention **Export JSONL**.
-18. **Scenarios & Tests → Run all**: 18/18 PASS, expected vs actual per check (timeout, duplicate action, approval expiry, inventory drift, unsafe LLM proposal…). Mention `npm test` (50 tests) and `npm run scenario -- all --llm`.
+18. **Scenarios & Tests → Run all**: 20/20 PASS, expected vs actual per check (timeout, duplicate action, approval expiry, inventory drift, unsafe LLM proposal…). Mention `npm test` (54 tests) and `npm run scenario -- all --llm`.
 
 ## Optional extras (≈2 min, if time allows)
 19. **Shift Planner:** reset, select **Greedy + local search**, then **Generate plan** → Optimizer panel (makespan 109 → 85, explained swaps).

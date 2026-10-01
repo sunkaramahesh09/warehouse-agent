@@ -16,10 +16,11 @@ A small, controlled, observable warehouse-operations prototype. Two cooperating 
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, tool pipeline, resolver/approval/planner flows, LLM vs deterministic responsibilities |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Schema, constraints, seed, reset/persistence |
 | [docs/POLICIES.md](docs/POLICIES.md) | The 11 shared SOP rules and where each is enforced |
-| [docs/SCENARIOS.md](docs/SCENARIOS.md) | 18 reproducible scenarios (setup, trigger, expected, boundary, reset) |
+| [docs/SCENARIOS.md](docs/SCENARIOS.md) | 20 reproducible scenarios (setup, trigger, expected, boundary, reset) |
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | 13 failure modes, explicit states, recovery, evidence |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 8–12 minute live demo steps |
 | [docs/REFLECTION.md](docs/REFLECTION.md) | Design decisions, **AI assistance disclosure**, changes from Phase 0, debugging lesson, risks, next steps |
+| [docs/AI_TOOLS.md](docs/AI_TOOLS.md) | Every AI tool used (Claude Code for building, Gemini at runtime), what it did, and how its output was verified |
 | [docs/OPTIONAL_FEATURES.md](docs/OPTIONAL_FEATURES.md) | Event-driven automation, metrics + evaluation harness, local-search optimizer |
 | [docs/UI_REDESIGN_PLAN.md](docs/UI_REDESIGN_PLAN.md) | UI redesign: reference mapping, design system, what was verified |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operations + progress log / resume guide |
@@ -106,7 +107,7 @@ npm run demo:trace                    # demo storyline → docs/results/audit-lo
 npm run typecheck
 ```
 
-Current results: **20/20 scenarios** (deterministic) · **18/18 core scenarios with Gemini, all LLM-driven** · **54/54 tests** · evaluation 100% accuracy, 0 unsafe actions in both modes (see `docs/results/`). The free Gemini tier allows 500 requests/day; when that is used up the agent visibly falls back to deterministic mode.
+Current results: **20/20 scenarios** (deterministic) · **20/20 with Gemini** (15 of 16 resolver runs LLM-driven; one labelled fallback, see [SCENARIOS.md](docs/SCENARIOS.md#current-results)) · **54/54 tests** · evaluation 100% accuracy, 0 unsafe actions in both modes (see `docs/results/`). The free Gemini tier allows 500 requests/day; when that is used up the agent visibly falls back to deterministic mode.
 
 Scenario ids: `inventory-shortfall`, `duplicate-order`, `shipment-desync`, `shipment-desync-contradictory`, `invalid-data`, `stale-shipment`, `destination-conflict`, `planning-cycle`, `replanning`, `urgent-order`, `cross-agent`, `tool-timeout`, `missing-record`, `duplicate-action`, `approval-expiry`, `inventory-drift`, `planner-failure`, `unsafe-llm-proposal`, `event-driven`, `optimizer`.
 
@@ -148,11 +149,11 @@ Roles: use the header switch. **Operator / Supervisor** runs workflows, injects 
 - No authentication; roles are selected in the UI. A single shared demo database means reviewers share state and a reset affects everyone. Mutations are serialised in-process (single instance).
 - The free Gemini tier is rate-limited, and an investigation takes about 10–40 s. On quota exhaustion the run transparently falls back to the deterministic investigator (shown as `llm->deterministic` with the reason).
 - LLM tool sequences vary between runs; outcomes are bounded by the deterministic guard.
-- The planner is greedy (not globally optimal), never splits orders, and uses a simple zone-distance travel model. Picking execution is simulated linearly by the simulated clock.
+- The default planner is greedy (not globally optimal); the opt-in local search improves sequencing but neither strategy splits orders, and travel uses a simple zone-distance model. Picking execution is simulated linearly by the simulated clock.
 - The mapping from exception type to its governing policy is in code; policy text and parameters are shared data.
 
 More detail is in [REFLECTION.md](docs/REFLECTION.md#remaining-risks-and-limitations).
 
 ## AI assistance disclosure
 
-Built with substantial help from **Claude Code (Anthropic)** for requirements analysis, code generation, tests, documentation, and debugging. At runtime the resolver uses **Google Gemini** for tool selection and explanations. The candidate is responsible for the requirements interpretation, architecture, safety boundaries, validation and final decisions. See [REFLECTION.md](docs/REFLECTION.md#ai-assistance-disclosure).
+Built with substantial help from **Claude Code (Anthropic)** for requirements analysis, code generation, tests, documentation, and debugging. At runtime the resolver uses **Google Gemini** for tool selection and explanations. The candidate is responsible for the requirements interpretation, architecture, safety boundaries, validation and final decisions. See [REFLECTION.md](docs/REFLECTION.md#ai-assistance-disclosure) and [AI_TOOLS.md](docs/AI_TOOLS.md).

@@ -43,7 +43,7 @@ Verdicts are computed from **database state**, never from agent text. PASS = all
 ## Current results
 
 - Deterministic agent: **20/20 PASS** (see `results/scenario-results.md`)
-- Gemini agent (`gemini-3.1-flash-lite`, free tier): **18/18 PASS** on the core scenarios, every resolver run LLM-driven, with no fallback (`results/scenario-results-llm.md`). The two optional-feature scenarios (`event-driven`, `optimizer`) have not yet had a clean LLM run: the free tier's 500 requests/day were exhausted during development. `optimizer` does not use the LLM at all.
+- Gemini agent (`gemini-3.1-flash-lite`, free tier, paced at 4.5 s/request): **20/20 PASS** (`results/scenario-results-llm.md`, 2026-10-01). **15 of 16 resolver runs were LLM-driven.** The one fallback, labelled in the report, was the second auto-investigation inside `event-driven`; the scenario still passed because the run continued deterministically from the same evidence. Run on its own, `event-driven` was fully LLM-driven (both auto-investigations). An earlier full run the same day also passed 20/20, with two labelled fallbacks: one Gemini `503 overloaded` in `duplicate-action`, and the same `event-driven` slot. The `event-driven` report line now records the fallback reason too. `optimizer` and the planner scenarios do not call the LLM.
 - Gemini evaluation: 14 runs, 100% accuracy, 100% consistency, 100% agreement, 0 unsafe actions, 13/14 LLM-driven (1 rate-limit fallback) (`results/eval-report-llm.md`)
 - Degraded mode (quota exhausted): 20/20 PASS with the fallbacks labelled per run (`results/scenario-results-llm-degraded.md`). This shows correctness when the LLM is unavailable, not LLM coverage
 - `npm test`: 54 tests (unit + integration) pass
