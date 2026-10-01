@@ -38,9 +38,9 @@ const currentPage = (): Page => {
 function Brand({ compact = false, shrunk = false }: { compact?: boolean; shrunk?: boolean }) {
   return (
     <a href="#/dashboard" className="flex shrink-0 items-center gap-3 whitespace-nowrap">
-      <Logo size={42} className={`shrink-0 drop-shadow-sm ${HDR_T} ${shrunk ? 'scale-[0.86]' : ''}`} title="" />
+      <Logo size={42} className={`shrink-0 drop-shadow-sm ${HDR_T} ${shrunk ? 'h-8 w-8' : 'h-[42px] w-[42px]'}`} title="" />
       <div className="leading-tight">
-        <div className="text-[17px] font-bold text-navy">Warehouse Ops</div>
+        <div className={`font-bold text-navy ${HDR_T} ${shrunk ? 'text-[15px]' : 'text-[17px]'}`}>Warehouse Ops</div>
         {!compact && <div className={`overflow-hidden text-xs text-slate-500 ${HDR_T} ${shrunk ? 'max-h-0 opacity-0' : 'max-h-5'}`}>Exception Resolver + Shift Planner</div>}
       </div>
     </a>
@@ -49,7 +49,7 @@ function Brand({ compact = false, shrunk = false }: { compact?: boolean; shrunk?
 
 /** Shared easing for the scroll-compact header (off for prefers-reduced-motion). */
 const HDR_T = 'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
-const COMPACT_AT = 56, EXPAND_AT = 16; // px of #main scroll, with hysteresis so it never flickers
+const COMPACT_AT = 48, EXPAND_AT = 16; // px of #main scroll, with hysteresis so it never flickers
 
 /**
  * Compacts the header once #main is scrolled. Only flips React state when the threshold is crossed
@@ -158,15 +158,15 @@ export default function App() {
           once #main scrolls it becomes a compact, floating translucent bar (same element, same controls). */}
       <header ref={headerRef} data-compact={compact || undefined}
         className={`absolute z-30 ${HDR_T} ${compact
-          ? 'left-2 right-2 top-2 rounded-2xl border-b border-transparent bg-white/75 shadow-[0_0_0_1px_rgba(15,27,53,0.07),0_10px_30px_-10px_rgba(15,27,53,0.22),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl backdrop-saturate-150 sm:left-3 sm:right-3 sm:top-2.5'
-          : 'left-0 right-0 top-0 rounded-none border-b border-line bg-white shadow-[0_0_0_0_rgba(15,27,53,0),0_0_0_0_rgba(15,27,53,0),inset_0_0_0_rgba(255,255,255,0)] [backdrop-filter:none]'}`}>
-        <div className={`flex flex-wrap items-center gap-3 ${HDR_T} ${compact ? 'px-3 py-2 lg:px-4' : 'px-4 py-3 lg:px-5'}`}>
+          ? 'left-3 right-3 top-3 rounded-[20px] border border-white/55 bg-white/[0.78] shadow-[0_0_0_1px_rgba(15,27,53,0.06),0_8px_30px_rgba(20,40,70,0.10)] [-webkit-backdrop-filter:blur(18px)_saturate(140%)] [backdrop-filter:blur(18px)_saturate(140%)] sm:left-4 sm:right-4 lg:left-5 lg:right-5'
+          : 'left-0 right-0 top-0 rounded-none border-0 border-b border-line bg-white shadow-[0_0_0_0_rgba(15,27,53,0),0_0_0_rgba(20,40,70,0)] [backdrop-filter:none]'}`}>
+        <div className={`flex flex-wrap items-center gap-x-3 ${HDR_T} ${compact ? 'gap-y-0 px-3 py-[9px] lg:px-4' : 'gap-y-3 px-4 py-3 lg:px-5'}`}>
           <button className="btn-secondary btn-sm lg:hidden" onClick={() => setNavOpen(true)} aria-label="Open navigation"><Menu className="h-4 w-4" /></button>
-          <div className="shrink-0 lg:min-w-[236px] lg:pr-3"><Brand shrunk={compact} /></div>
+          <div className={`shrink-0 ${HDR_T} ${compact ? 'lg:min-w-0 lg:pr-0' : 'lg:min-w-[236px] lg:pr-3'}`}><Brand shrunk={compact} /></div>
 
           {/* Simulation notice: always visible at the top of every page; folds away in the compact header. */}
           <div aria-hidden={compact || undefined} className={`order-last flex w-full min-w-0 items-start gap-2 overflow-hidden rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs text-amber-900 min-[1400px]:order-none min-[1400px]:w-auto min-[1400px]:flex-1 ${HDR_T} ${compact
-            ? 'pointer-events-none -mt-3 max-h-0 border-0 py-0 opacity-0 min-[1400px]:mt-0'
+            ? 'pointer-events-none max-h-0 border-0 py-0 opacity-0'
             : 'max-h-28 py-2'}`} role="note">
             <CircleAlert className="mt-px h-4 w-4 shrink-0 text-amber-600" aria-hidden />
             <span><b className="font-semibold">SIMULATED ENVIRONMENT</b> — fictional data, no connection to any real warehouse, carrier or customer system. All actions are simulated.</span>
@@ -181,7 +181,7 @@ export default function App() {
                 <div className="text-[10px] text-slate-500">Shift ends {hhmm(sim?.shift_end)}</div>
               </div>
             </div>
-            <div className={`flex items-center rounded-xl px-3 py-1.5 ring-1 ${HDR_T} ${compact ? 'max-sm:gap-0 max-sm:px-2.5 max-sm:py-3 gap-2' : 'gap-2'} ${llm?.configured ? 'bg-emerald-50 ring-emerald-100' : 'bg-slate-50 ring-line'}`}
+            <div className={`flex items-center rounded-xl px-3 ring-1 ${HDR_T} ${compact ? 'gap-2 py-2 max-sm:gap-0 max-sm:px-2.5 max-sm:py-[13px]' : 'gap-2 py-1.5'} ${llm?.configured ? 'bg-emerald-50 ring-emerald-100' : 'bg-slate-50 ring-line'}`}
               title={`Agent mode — LLM: ${llm?.configured ? llm.model : 'Deterministic (no key)'}`} data-llm-chip>
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${llm?.configured ? 'bg-emerald-500' : 'bg-slate-400'}`} aria-hidden />
               <div className={`overflow-hidden whitespace-nowrap leading-tight ${HDR_T} ${compact ? 'max-w-[260px] max-sm:max-w-0 max-sm:opacity-0' : 'max-w-[260px]'}`}>
@@ -192,13 +192,13 @@ export default function App() {
             <label className="relative flex items-center">
               <span className="sr-only">Role</span>
               <UserRound className="pointer-events-none absolute left-3 h-4 w-4 text-slate-500" aria-hidden />
-              <select className="input appearance-none py-2.5 pl-9 pr-8 font-medium" value={role} onChange={(e) => changeRole(e.target.value as Role)}>
+              <select className={`input appearance-none pl-9 pr-8 font-medium ${HDR_T} ${compact ? 'py-[7px]' : 'py-2.5'}`} value={role} onChange={(e) => changeRole(e.target.value as Role)}>
                 <option value="operator">Operator / Supervisor</option>
                 <option value="reviewer">Exception Reviewer</option>
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-slate-400" aria-hidden />
             </label>
-            <button className={`btn-primary py-2.5 ${compact ? 'max-lg:gap-0 max-lg:px-3' : ''}`} disabled={!!reset.busy || role !== 'operator'} title={role !== 'operator' ? 'Operator only' : 'Restore the baseline seed'}
+            <button className={`btn-primary ${compact ? 'py-2 max-lg:gap-0 max-lg:px-3' : 'py-2.5'}`} disabled={!!reset.busy || role !== 'operator'} title={role !== 'operator' ? 'Operator only' : 'Restore the baseline seed'}
               aria-label={compact ? (reset.busy ? 'Resetting…' : 'Reset environment') : undefined}
               onClick={() => { if (confirm('Reset the simulated environment to the baseline seed? All runs, plans and approvals are cleared.')) reset.run('reset', () => api.post('/api/reset')); }}>
               {reset.busy ? <Spinner /> : <RotateCcw className="h-4 w-4" aria-hidden />}
@@ -210,7 +210,7 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1">
         {/* ---------------- sidebar ---------------- */}
-        <aside className={`hidden w-[260px] shrink-0 overflow-y-auto overscroll-contain border-r border-line bg-canvas/60 px-3 pb-4 lg:block ${HDR_T} ${compact ? 'pt-[calc(var(--hdr-compact,64px)+1.625rem)]' : 'pt-[calc(var(--hdr-full,108px)+1rem)]'}`}>{nav}</aside>
+        <aside className={`hidden w-[260px] shrink-0 overflow-y-auto overscroll-contain border-r border-line bg-canvas/60 px-3 pb-4 lg:block ${HDR_T} ${compact ? 'pt-[calc(var(--hdr-compact,56px)+1.75rem)]' : 'pt-[calc(var(--hdr-full,108px)+1rem)]'}`}>{nav}</aside>
 
         {navOpen && (
           <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
