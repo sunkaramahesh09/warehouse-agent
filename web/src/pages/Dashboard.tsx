@@ -34,7 +34,7 @@ const DEMO: Array<[string, React.ReactNode]> = [
 export default function Dashboard() {
   const { data, error } = useApi<any>('/api/dashboard');
   const meta = useApi<any>('/api/meta');
-  const header = <PageHeader art="dashboard" artTilt icon={LayoutDashboard} crumb="Dashboard" title={<>Operations <span className="text-teal-700">dashboard</span></>}
+  const header = <PageHeader art="dashboard" icon={LayoutDashboard} crumb="Dashboard" title={<>Operations <span className="text-teal-700">dashboard</span></>}
     subtitle="One shared simulated WMS/OMS. The Exception Resolver writes to it; the Shift Planner reads from it." />;
   if (!data) return <div>{header}{error ? <div className="text-sm text-rose-700">Could not load the dashboard: {error}</div> : <LoadingState label="Loading operational overview…" />}</div>;
 
