@@ -22,7 +22,7 @@ export default function Metrics() {
   // Unchanged: confirm, then POST /api/eval/run (deterministic, 3 repetitions; resets the environment).
   const runEval = () => { if (confirm('Run the deterministic evaluation (resets the environment 21 times)?')) act.run('eval', () => api.post('/api/eval/run', { repetitions: 3 })); };
   const header = (
-    <PageHeader photo="metrics" icon={BarChart3} crumb="Metrics & Evaluation" title="Metrics & Evaluation"
+    <PageHeader art="metrics" icon={BarChart3} crumb="Metrics & Evaluation" title="Metrics & Evaluation"
       subtitle="Computed from stored runs, audit events, plans and test history — never self-reported by an agent. Current-environment metrics reset with the environment; scenario and evaluation history persist."
       actions={<button className="btn-primary" disabled={!isOp || !!act.busy} title="Runs every seeded exception 3× from a clean reset (deterministic). LLM evaluation: npm run eval -- --llm" onClick={runEval}>
         {act.busy === 'eval' ? <Spinner /> : <Play className="h-4 w-4" aria-hidden />}{act.busy === 'eval' ? 'Evaluating…' : 'Run evaluation (deterministic ×3)'}

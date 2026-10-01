@@ -34,7 +34,7 @@ export default function Scenarios() {
 
   return (
     <div className="space-y-5">
-      <PageHeader photo="scenarios" icon={FlaskConical} crumb="Scenarios & Tests" title="Scenarios & Tests"
+      <PageHeader art="scenarios" icon={FlaskConical} crumb="Scenarios & Tests" title="Scenarios & Tests"
         subtitle="Each scenario RESETS the environment, drives the real workflows, then checks shared state (expected vs actual). Verdicts come from database state, never from agent text."
         actions={<>
           <Select label="Agent mode" className="w-48" value={mode} onChange={(v) => setMode(v as any)} options={[{ value: 'deterministic', label: 'deterministic agent' }, { value: 'llm', label: `LLM agent${llmOn ? '' : ' (no key)'}`, disabled: !llmOn }]} />

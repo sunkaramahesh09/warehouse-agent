@@ -5,6 +5,7 @@
 import { useId, useState, type ComponentType, type ReactNode } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Info, Loader2, Search, type LucideProps } from 'lucide-react';
 import { Illustration, type IllustrationKind } from './Illustration';
+import { HeroArt, type HeroScene } from './HeroArt';
 
 export type Icon = ComponentType<LucideProps>;
 
@@ -121,35 +122,34 @@ export function Stat({ label, value, tone = 'slate', hint }: { label: string; va
 }
 
 // ------------------------------------------------------------------ page header
-/** Photo banners (royalty-free stock photos, see docs/UI_REDESIGN_PLAN.md §7.7d); one per page. */
-export type HeroPhoto = 'dashboard' | 'orders' | 'inventory' | 'pickers' | 'exceptions' | 'queue' | 'planner' | 'events' | 'audit' | 'metrics' | 'scenarios' | 'policies';
-
-export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside, photo }: {
-  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode; photo?: HeroPhoto;
+/** Page-header banner with original isometric artwork (components/HeroArt.tsx); one scene per page. */
+export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside, art }: {
+  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode; art?: HeroScene;
 }) {
   return (
-    <div className={`relative mb-5 overflow-hidden rounded-2xl ${photo ? 'lg:-mx-2 lg:-mt-2 lg:min-h-[184px] lg:px-2 lg:pt-2' : ''}`}>
-      {photo && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[52%] lg:block xl:w-[56%]" aria-hidden>
-          <img src={`/hero/${photo}.webp`} alt="" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
-          {/* soft fade into the page canvas (left, bottom, top) — overlays render identically in every browser */}
-          <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/55 via-35% to-transparent to-75%" />
-          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/20 via-30% to-transparent to-55%" />
-          <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-canvas/70 to-transparent" />
+    <div className={`relative mb-5 overflow-hidden ${art ? 'rounded-3xl border border-line bg-white px-5 py-5 md:px-7 lg:min-h-[220px]' : 'rounded-2xl'}`} style={art ? { boxShadow: 'var(--shadow-card)' } : undefined}>
+      {art && (
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
+          {/* soft brand wash + dot grid, fading in from the right */}
+          <div className="absolute inset-0 bg-[radial-gradient(120%_140%_at_100%_0%,#d9f4ef_0%,#eef8f6_35%,rgba(255,255,255,0)_70%)]" />
+          <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(#cbd9e6_1px,transparent_1.2px)] [background-size:16px_16px] [mask-image:linear-gradient(to_right,transparent_30%,#000_80%)]" />
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl" />
+          <HeroArt scene={art} className="absolute inset-y-0 right-0 hidden h-full w-[56%] lg:block" />
         </div>
       )}
-      {!photo && illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
-      <div className="relative flex flex-wrap items-end justify-between gap-4 py-1">
-        <div className={`min-w-0 ${photo ? 'max-w-3xl lg:max-w-[52%] xl:max-w-[48%]' : 'max-w-3xl'}`}>
+      {!art && illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
+      <div className={`relative flex flex-wrap items-end justify-between gap-4 ${art ? 'h-full lg:min-h-[176px]' : 'py-1'}`}>
+        <div className={`min-w-0 ${art ? 'max-w-3xl self-center lg:max-w-[48%]' : 'max-w-3xl'}`}>
           {crumb && (
-            <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-teal-800">
+            <div className={`mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-teal-800 ${art ? 'rounded-full bg-teal-50 px-2.5 py-1 ring-1 ring-teal-100' : ''}`}>
               {I && <I className="h-4 w-4" aria-hidden />}{crumb}
             </div>
           )}
           <h1 className="text-[28px] font-bold leading-tight tracking-tight text-navy md:text-[32px]">{title}</h1>
           {subtitle && <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
+          {art && (aside || actions) && <div className="mt-4 flex flex-wrap items-center gap-2">{aside}{actions}</div>}
         </div>
-        {(aside || actions) && <div className={`relative flex flex-wrap items-center gap-2 ${photo || illustration ? 'lg:rounded-2xl lg:bg-white/85 lg:p-2 lg:shadow-sm lg:ring-1 lg:ring-line lg:backdrop-blur' : ''}`}>{aside}{actions}</div>}
+        {!art && (aside || actions) && <div className={`relative flex flex-wrap items-center gap-2 ${illustration ? 'xl:rounded-2xl xl:bg-white/85 xl:p-2 xl:shadow-sm xl:ring-1 xl:ring-line xl:backdrop-blur' : ''}`}>{aside}{actions}</div>}
       </div>
     </div>
   );
