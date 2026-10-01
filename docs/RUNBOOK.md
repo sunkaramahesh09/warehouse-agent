@@ -45,7 +45,8 @@
 | **v1.2.1-ui** | tag `v1.2.1-ui` | `25506de5-8063-4764-9b46-dd69f46f5112` | Fixed sidebar: only the main panel scrolls |
 | **v1.2.2-ui** | tag `v1.2.2-ui` | `d973bccb-90a3-4b63-8cfa-54352e5c8982` | Original logo mark + SVG favicon |
 | **v1.2.3-ui** | tag `v1.2.3-ui` | `0308e449-d3d6-427d-add0-a567514765a3` (removed) | Realistic per-page header photos (photos since removed) |
-| **v1.2.4-ui** (current `main`) | tag `v1.2.4-ui` | `5ec9c6a8-3e4e-4cc1-ad31-b70b76ba2289` | Photos replaced by original isometric SVG header art (`web/src/components/HeroArt.tsx`, UI_REDESIGN_PLAN §7.7e) |
+| **v1.2.4-ui** | tag `v1.2.4-ui` | `5ec9c6a8-3e4e-4cc1-ad31-b70b76ba2289` (removed) | Photos replaced by original isometric SVG header art (`web/src/components/HeroArt.tsx`, UI_REDESIGN_PLAN §7.7e) |
+| **v1.2.5-ui** (current `main`) | tag `v1.2.5-ui` | `4e8ce589-2449-442e-8663-ce3d8d0828c2` | + subtle pointer-parallax 3D tilt on the Dashboard header art (fine pointers only, off for reduced motion / touch) |
 
 Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
