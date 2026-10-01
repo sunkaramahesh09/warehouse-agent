@@ -3,7 +3,7 @@
  * (teal / navy / cardboard) with floating "UI chips". Pure inline SVG — no photos, no external
  * assets, decorative only (aria-hidden). One scene per page.
  */
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import {
   Activity, BadgeCheck, BarChart3, BookOpen, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, FlaskConical, Package, ScrollText, ShieldCheck, TriangleAlert, Truck, Users, Zap, type LucideProps,
 } from 'lucide-react';
@@ -119,7 +119,7 @@ type ToneKey = keyof typeof TONE;
 function Chip({ x, y, w, h = 44, icon: I, tone = 'teal', filter, children }: { x: number; y: number; w: number; h?: number; icon?: LIcon; tone?: ToneKey; filter: string; children?: ReactNode }) {
   const [bg, fg] = TONE[tone];
   return (
-    <g transform={`translate(${x} ${y})`}>
+    <g data-depth="fg"><g transform={`translate(${x} ${y})`}>
       <rect width={w} height={h} rx={10} fill="#fff" filter={filter} />
       <rect width={w} height={h} rx={10} fill="none" stroke="#e3e8ef" />
       {I && (
@@ -129,7 +129,7 @@ function Chip({ x, y, w, h = 44, icon: I, tone = 'teal', filter, children }: { x
         </>
       )}
       <g transform={`translate(${I ? 41 : 10} 0)`}>{children}</g>
-    </g>
+    </g></g>
   );
 }
 /** two "text" lines */
@@ -418,10 +418,66 @@ function Scene({ kind, f }: { kind: HeroScene; f: string }) {
   }
 }
 
-export function HeroArt({ scene, className = '' }: { scene: HeroScene; className?: string }) {
+/**
+ * Subtle pointer parallax: the scene tilts toward the cursor while it is over the art, floating chips
+ * move a little more (foreground), the glow a little less (background). Fine pointers only, off for
+ * prefers-reduced-motion. Transforms are written straight to the DOM from one rAF loop (no React state).
+ */
+function useTilt(ref: React.RefObject<SVGSVGElement | null>, enabled: boolean) {
+  useEffect(() => {
+    const svg = ref.current;
+    if (!enabled || !svg) return;
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const fg = Array.from(svg.querySelectorAll<SVGGElement>('[data-depth="fg"]'));
+    const bg = Array.from(svg.querySelectorAll<SVGGElement>('[data-depth="bg"]'));
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+
+    const apply = () => {
+      const moving = Math.abs(cx) > 0.001 || Math.abs(cy) > 0.001;
+      svg.style.transform = moving ? `perspective(900px) rotateX(${(-cy * 5).toFixed(3)}deg) rotateY(${(cx * 5).toFixed(3)}deg) translate3d(${(cx * 4).toFixed(2)}px, ${(cy * 4).toFixed(2)}px, 0)` : '';
+      svg.style.willChange = moving ? 'transform' : '';
+      for (const g of fg) g.style.transform = moving ? `translate(${(cx * 5).toFixed(2)}px, ${(cy * 4).toFixed(2)}px)` : '';
+      for (const g of bg) g.style.transform = moving ? `translate(${(-cx * 3).toFixed(2)}px, ${(-cy * 2).toFixed(2)}px)` : '';
+    };
+    const tick = () => {
+      cx += (tx - cx) * 0.09; cy += (ty - cy) * 0.09; // eased follow, no jumps
+      if (Math.abs(tx - cx) < 0.0005 && Math.abs(ty - cy) < 0.0005) { cx = tx; cy = ty; raf = 0; } else raf = requestAnimationFrame(tick);
+      apply();
+    };
+    const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || !fine.matches || reduced.matches) return;
+      const r = svg.getBoundingClientRect();
+      const inside = r.width > 0 && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      const nx = inside ? ((e.clientX - r.left) / r.width) * 2 - 1 : 0;
+      const ny = inside ? ((e.clientY - r.top) / r.height) * 2 - 1 : 0;
+      if (nx !== tx || ny !== ty) { tx = nx; ty = ny; kick(); }
+    };
+    const reset = () => { tx = 0; ty = 0; kick(); };
+    const onMotionPref = () => { if (reduced.matches) { tx = ty = cx = cy = 0; cancelAnimationFrame(raf); raf = 0; apply(); } };
+    // the art sits under the (pointer-transparent) header text layer, so hit-test against its own box
+    document.addEventListener('pointermove', onMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', reset);
+    window.addEventListener('blur', reset);
+    reduced.addEventListener('change', onMotionPref);
+    return () => {
+      document.removeEventListener('pointermove', onMove);
+      document.documentElement.removeEventListener('pointerleave', reset);
+      window.removeEventListener('blur', reset);
+      reduced.removeEventListener('change', onMotionPref);
+      cancelAnimationFrame(raf);
+      tx = ty = cx = cy = 0; apply();
+    };
+  }, [ref, enabled]);
+}
+
+export function HeroArt({ scene, className = '', tilt = false }: { scene: HeroScene; className?: string; tilt?: boolean }) {
   const id = useId().replace(/:/g, '');
+  const ref = useRef<SVGSVGElement>(null);
+  useTilt(ref, tilt);
   return (
-    <svg viewBox="128 0 432 236" className={className} aria-hidden focusable={false} preserveAspectRatio="xMaxYMid meet">
+    <svg ref={ref} viewBox="128 0 432 236" className={className} aria-hidden focusable={false} preserveAspectRatio="xMaxYMid meet">
       <defs>
         <filter id={`${id}s`} x="-20%" y="-30%" width="140%" height="180%">
           <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#0f1b35" floodOpacity="0.10" />
@@ -429,7 +485,7 @@ export function HeroArt({ scene, className = '' }: { scene: HeroScene; className
         <filter id={`${id}b`} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10" /></filter>
         <radialGradient id={`${id}r`} cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#5eead4" stopOpacity="0.35" /><stop offset="1" stopColor="#5eead4" stopOpacity="0" /></radialGradient>
       </defs>
-      <ellipse cx={OX - 10} cy={120} rx={230} ry={115} fill={`url(#${id}r)`} />
+      <g data-depth="bg"><ellipse cx={OX - 10} cy={120} rx={230} ry={115} fill={`url(#${id}r)`} /></g>
       <polygon points={poly([4, 10, -14], [204, 10, -14], [204, 160, -14], [4, 160, -14])} fill="#0f4a46" opacity={0.16} filter={`url(#${id}b)`} />
       <Scene kind={scene} f={`url(#${id}s)`} />
     </svg>

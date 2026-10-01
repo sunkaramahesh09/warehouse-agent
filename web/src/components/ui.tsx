@@ -123,8 +123,8 @@ export function Stat({ label, value, tone = 'slate', hint }: { label: string; va
 
 // ------------------------------------------------------------------ page header
 /** Page-header banner with original isometric artwork (components/HeroArt.tsx); one scene per page. */
-export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside, art }: {
-  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode; art?: HeroScene;
+export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustration, aside, art, artTilt }: {
+  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: Icon; crumb?: string; illustration?: IllustrationKind; aside?: ReactNode; art?: HeroScene; artTilt?: boolean;
 }) {
   return (
     <div className={`relative mb-5 overflow-hidden ${art ? 'rounded-3xl border border-line bg-white px-5 py-5 md:px-7 lg:min-h-[220px]' : 'rounded-2xl'}`} style={art ? { boxShadow: 'var(--shadow-card)' } : undefined}>
@@ -134,7 +134,7 @@ export function PageHeader({ title, subtitle, actions, icon: I, crumb, illustrat
           <div className="absolute inset-0 bg-[radial-gradient(120%_140%_at_100%_0%,#d9f4ef_0%,#eef8f6_35%,rgba(255,255,255,0)_70%)]" />
           <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(#cbd9e6_1px,transparent_1.2px)] [background-size:16px_16px] [mask-image:linear-gradient(to_right,transparent_30%,#000_80%)]" />
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl" />
-          <HeroArt scene={art} className="absolute inset-y-0 right-0 hidden h-full w-[56%] lg:block" />
+          <HeroArt scene={art} tilt={artTilt} className="absolute inset-y-0 right-0 hidden h-full w-[56%] lg:block" />
         </div>
       )}
       {!art && illustration && <Illustration kind={illustration} className="pointer-events-none absolute -right-2 -top-3 hidden h-[150px] w-[340px] opacity-90 xl:block" />}
