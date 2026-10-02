@@ -1,6 +1,6 @@
 /**
  * Lightweight toasts: call toast({ title, message }) from anywhere; one <ToastHost /> (mounted in App) renders them.
- * Announced politely to screen readers, auto-dismiss after a few seconds (paused while hovered), stack bottom-right.
+ * Announced politely to screen readers, auto-dismiss after a few seconds (paused while hovered), stack top-right (below the header on wide screens).
  */
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Info, X } from 'lucide-react';
@@ -49,7 +49,7 @@ export function ToastHost() {
     return () => { push = null; };
   }, []);
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-4 z-[70] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6">
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-4 top-4 z-[70] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 lg:top-[calc(var(--hdr-full,90px)+0.75rem)]">
       {items.map((t) => <Item key={t.id} t={t} onClose={() => setItems((xs) => xs.filter((x) => x.id !== t.id))} />)}
     </div>
   );
