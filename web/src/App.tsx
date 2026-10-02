@@ -9,6 +9,7 @@ import { ErrorBox, Select, Spinner, hhmm, type Icon } from './components/ui';
 import { Illustration } from './components/Illustration';
 import { Logo } from './components/Logo';
 import { DialogHost, confirmDialog } from './components/Dialog';
+import { ToastHost, toast } from './components/Toast';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Inventory from './pages/Inventory';
@@ -110,7 +111,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
 
-  const changeRole = (r: Role) => { setRole(r); setRoleState(r); notifyChanged(); };
+  const changeRole = (r: Role) => {
+    setRole(r); setRoleState(r); notifyChanged();
+    toast(r === 'operator'
+      ? { title: 'Switched to Operator / Supervisor', message: 'You can run workflows, inject changes, approve or reject actions, and reset the environment.' }
+      : { title: 'Switched to Exception Reviewer', message: 'You can resolve escalations. Running workflows, approvals and reset are Operator-only.' });
+  };
   const pending = counts.data?.pending_approvals ?? 0;
   const escal = counts.data?.open_escalations ?? 0;
   const openExc = (counts.data?.exceptions ?? []).filter((x: any) => !['RESOLVED', 'CLOSED'].includes(x.status)).reduce((s: number, x: any) => s + x.n, 0);
@@ -234,6 +240,7 @@ export default function App() {
         </main>
       </div>
       <DialogHost />
+      <ToastHost />
     </div>
   );
 }
