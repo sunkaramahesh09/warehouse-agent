@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { api, getRole, setRole, notifyChanged, type Role } from './api';
 import { useApi, useAction } from './hooks';
-import { ErrorBox, Spinner, hhmm, type Icon } from './components/ui';
+import { ErrorBox, Select, Spinner, hhmm, type Icon } from './components/ui';
 import { Illustration } from './components/Illustration';
 import { Logo } from './components/Logo';
 import { DialogHost, confirmDialog } from './components/Dialog';
@@ -190,15 +190,9 @@ export default function App() {
                 <div className="text-[13px] font-semibold text-navy">{llm?.configured ? llm.model : 'Deterministic (no key)'}</div>
               </div>
             </div>
-            <label className="relative flex items-center">
-              <span className="sr-only">Role</span>
-              <UserRound className="pointer-events-none absolute left-3 h-4 w-4 text-slate-500" aria-hidden />
-              <select className={`input appearance-none pl-9 pr-8 font-medium ${HDR_T} ${compact ? 'py-[7px]' : 'py-2.5'}`} value={role} onChange={(e) => changeRole(e.target.value as Role)}>
-                <option value="operator">Operator / Supervisor</option>
-                <option value="reviewer">Exception Reviewer</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-slate-400" aria-hidden />
-            </label>
+            <Select label="Role" icon={UserRound} value={role} onChange={(v) => changeRole(v as Role)}
+              triggerClassName={`pl-9 font-medium ${HDR_T} ${compact ? 'py-[7px]' : 'py-2.5'}`}
+              options={[{ value: 'operator', label: 'Operator / Supervisor' }, { value: 'reviewer', label: 'Exception Reviewer' }]} />
             <button className={`btn-primary ${compact ? 'py-2 max-lg:gap-0 max-lg:px-3' : 'py-2.5'}`} disabled={!!reset.busy || role !== 'operator'} title={role !== 'operator' ? 'Operator only' : 'Restore the baseline seed'}
               aria-label={compact ? (reset.busy ? 'Resetting…' : 'Reset environment') : undefined}
               onClick={async () => { if (await confirmDialog({ title: 'Reset environment?', message: 'The simulated environment returns to the baseline seed. All runs, plans and approvals are cleared.', confirmLabel: 'Reset environment', tone: 'danger' })) reset.run('reset', () => api.post('/api/reset')); }}>

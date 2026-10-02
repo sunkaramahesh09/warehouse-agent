@@ -2,8 +2,9 @@
  * Shared presentation components (design system). Presentation only — no data fetching,
  * no business rules. Every page composes these so the app reads as one product.
  */
-import { useId, useState, type ComponentType, type ReactNode } from 'react';
-import { AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Info, Loader2, Search, type LucideProps } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, ChevronDown, Info, Loader2, Search, type LucideProps } from 'lucide-react';
 import { Illustration, type IllustrationKind } from './Illustration';
 import { HeroArt, type HeroScene } from './HeroArt';
 
@@ -234,17 +235,104 @@ export function SearchInput({ value, onChange, placeholder, label, className = '
   );
 }
 
-export function Select({ value, onChange, options, label, className = '', disabled, hideLabel = true }: {
-  value: string; onChange: (v: string) => void; options: Array<{ value: string; label: string; disabled?: boolean }>; label: string; className?: string; disabled?: boolean; hideLabel?: boolean;
+type SelectOption = { value: string; label: string; disabled?: boolean };
+/**
+ * Custom listbox (replaces the native <select> so the open menu matches the design system).
+ * The closed trigger keeps the `.input` look; the menu is portalled so headers/tables never clip it.
+ * Keyboard: ↑/↓/Home/End move, Enter/Space pick, Esc/Tab close, letters jump (typeahead).
+ */
+export function Select({ value, onChange, options, label, className = '', disabled, hideLabel = true, icon: I, triggerClassName = '' }: {
+  value: string; onChange: (v: string) => void; options: SelectOption[]; label: string; className?: string; disabled?: boolean; hideLabel?: boolean;
+  icon?: Icon; triggerClassName?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number; up: boolean } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const typed = useRef({ q: '', t: 0 });
+  const id = useId();
+  const sel = Math.max(0, options.findIndex((o) => o.value === value));
+  const current = options[sel];
+
+  const place = () => {
+    const r = btn.current?.getBoundingClientRect(); if (!r) return;
+    const h = Math.min(288, options.length * 36 + 12);
+    const up = r.bottom + h + 8 > window.innerHeight && r.top > h + 8;
+    setPos({ left: r.left, top: up ? r.top - 6 : r.bottom + 6, width: r.width, up });
+  };
+  const show = () => { if (disabled) return; btn.current?.focus(); place(); setActive(sel); setOpen(true); };
+  const hide = (refocus = true) => { setOpen(false); if (refocus) btn.current?.focus(); };
+  const pick = (i: number) => { const o = options[i]; if (!o || o.disabled) return; if (o.value !== value) onChange(o.value); hide(); };
+  const step = (from: number, dir: 1 | -1) => {
+    for (let i = from + dir; i >= 0 && i < options.length; i += dir) if (!options[i].disabled) return i;
+    return from;
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => { const t = e.target as Node; if (!btn.current?.contains(t) && !list.current?.contains(t)) hide(false); };
+    const onScroll = (e: Event) => { if (!list.current?.contains(e.target as Node)) place(); };
+    document.addEventListener('mousedown', away);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', place);
+    return () => { document.removeEventListener('mousedown', away); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', place); };
+  }, [open]);
+  useEffect(() => { if (open) list.current?.querySelector<HTMLElement>(`[data-i="${active}"]`)?.scrollIntoView({ block: 'nearest' }); }, [open, active]);
+
+  const onKey = (e: React.KeyboardEvent) => {
+    const k = e.key;
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(k)) { e.preventDefault(); show(); }
+      return;
+    }
+    if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); hide(); }
+    else if (k === 'Tab') hide(false);
+    else if (k === 'ArrowDown') { e.preventDefault(); setActive((a) => step(a, 1)); }
+    else if (k === 'ArrowUp') { e.preventDefault(); setActive((a) => step(a, -1)); }
+    else if (k === 'Home') { e.preventDefault(); setActive(step(-1, 1)); }
+    else if (k === 'End') { e.preventDefault(); setActive(step(options.length, -1)); }
+    else if (k === 'Enter' || k === ' ') { e.preventDefault(); pick(active); }
+    else if (k.length === 1) {
+      const now = Date.now(); const t = typed.current;
+      t.q = (now - t.t > 600 ? '' : t.q) + k.toLowerCase(); t.t = now;
+      const i = options.findIndex((o) => !o.disabled && o.label.toLowerCase().startsWith(t.q));
+      if (i >= 0) setActive(i);
+    }
+  };
+
   return (
-    <label className={`relative block ${className}`}>
-      <span className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-slate-500'}>{label}</span>
-      <select className="input w-full appearance-none pr-8" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
-      </select>
-      <ChevronDown className={`pointer-events-none absolute right-2.5 h-4 w-4 text-slate-400 ${hideLabel ? 'top-1/2 -translate-y-1/2' : 'bottom-2.5'}`} aria-hidden />
-    </label>
+    <div className={`relative block ${className}`}>
+      <span id={`${id}-l`} className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-slate-500'} onClick={() => btn.current?.focus()}>{label}</span>
+      {I && <I className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden />}
+      <button ref={btn} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? `${id}-lb` : undefined}
+        aria-labelledby={`${id}-l ${id}-v`} onClick={() => (open ? hide() : show())} onKeyDown={onKey}
+        className={`input flex w-full cursor-pointer items-center pr-8 text-left disabled:cursor-not-allowed ${open ? 'border-brand/60 ring-2 ring-brand/15' : ''} ${triggerClassName}`}>
+        {/* Like a native <select>, size to the widest option: every label shares one grid cell, only the current one shows. */}
+        <span className="grid min-w-0">
+          {options.map((o, i) => <span key={o.value} id={i === sel ? `${id}-v` : undefined} aria-hidden={i !== sel || undefined}
+            className={`col-start-1 row-start-1 truncate ${i === sel ? '' : 'invisible'}`}>{o.label}</span>)}
+          {!current && <span className="col-start-1 row-start-1">{'\u00a0'}</span>}
+        </span>
+      </button>
+      <ChevronDown className={`pointer-events-none absolute right-2.5 h-4 w-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''} ${hideLabel ? 'top-1/2 -translate-y-1/2' : 'bottom-2.5'}`} aria-hidden />
+      {open && pos && createPortal(
+        <ul ref={list} id={`${id}-lb`} role="listbox" aria-labelledby={`${id}-l`} aria-activedescendant={`${id}-o${active}`} tabIndex={-1}
+          className={`select-menu fixed z-[55] max-h-72 overflow-y-auto overscroll-contain rounded-xl border border-line bg-white p-1.5 shadow-xl shadow-slate-900/10 ${pos.up ? '-translate-y-full origin-bottom' : 'origin-top'}`}
+          style={{ left: pos.left, top: pos.top, minWidth: pos.width }}>
+          {options.map((o, i) => {
+            const on = i === sel, hot = i === active;
+            return (
+              <li key={o.value} id={`${id}-o${i}`} data-i={i} role="option" aria-selected={on} aria-disabled={o.disabled || undefined}
+                onMouseEnter={() => !o.disabled && setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(i)}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-lg py-2 pl-2.5 pr-3 text-sm ${o.disabled ? 'cursor-not-allowed text-slate-400' : 'cursor-pointer text-navy'} ${hot && !o.disabled ? 'bg-teal-50' : ''} ${on ? 'font-semibold text-brand' : ''}`}>
+                <Check className={`h-4 w-4 shrink-0 ${on ? 'text-brand' : 'invisible'}`} aria-hidden />
+                {o.label}
+              </li>
+            );
+          })}
+        </ul>, document.body)}
+    </div>
   );
 }
 

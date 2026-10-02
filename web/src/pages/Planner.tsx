@@ -108,9 +108,7 @@ export default function Planner() {
           <div>
             <div className="label-xs mb-1.5">Picker availability</div>
             <div className="flex flex-wrap items-center gap-1.5">
-              <select aria-label="Picker" className="input py-1.5" value={pickerSel} onChange={(e) => setPickerSel(e.target.value)}>
-                  {available.map((x: any) => <option key={x.picker_id}>{x.picker_id}</option>)}
-                </select>
+              <Select label="Picker" triggerClassName="py-1.5" value={pickerSel} onChange={setPickerSel} options={available.map((x: any) => ({ value: x.picker_id, label: x.picker_id }))} />
               <button className="btn-danger-soft btn-sm" disabled={ctlDisabled || !available.length} onClick={() => inject('unavail', '/api/sim/picker', { picker_id: pickerSel, availability: 'UNAVAILABLE', reason: `Went home sick at ${hhmm(meta.data?.sim.sim_now)}` }, 'PICKER_UNAVAILABLE', `${pickerSel} unavailable`)}>
                 <UserX className="h-3.5 w-3.5" aria-hidden />Picker unavailable
               </button>
