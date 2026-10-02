@@ -5,6 +5,7 @@ import {
 import { api, getRole } from '../api';
 import { useApi, useAction } from '../hooks';
 import { Badge, EmptyState, ErrorBox, LoadingState, PageHeader, ProgressNote, SectionCard, Spinner, StatCard, dayhhmm } from '../components/ui';
+import { confirmDialog } from '../components/Dialog';
 
 const v = (x: number | null | undefined, suffix = '%') => (x === null || x === undefined ? '—' : `${x}${suffix}`);
 const kv = (o: Record<string, number>) => Object.entries(o ?? {});
@@ -20,7 +21,7 @@ export default function Metrics() {
   const act = useAction();
   const isOp = getRole() === 'operator';
   // Unchanged: confirm, then POST /api/eval/run (deterministic, 3 repetitions; resets the environment).
-  const runEval = () => { if (confirm('Run the deterministic evaluation (resets the environment 21 times)?')) act.run('eval', () => api.post('/api/eval/run', { repetitions: 3 })); };
+  const runEval = async () => { if (await confirmDialog({ title: 'Run deterministic evaluation?', message: 'Every seeded exception runs 3× from a clean reset — the environment is reset 21 times.', confirmLabel: 'Run evaluation' })) act.run('eval', () => api.post('/api/eval/run', { repetitions: 3 })); };
   const header = (
     <PageHeader art="metrics" icon={BarChart3} crumb="Metrics & Evaluation" title="Metrics & Evaluation"
       subtitle="Computed from stored runs, audit events, plans and test history — never self-reported by an agent. Current-environment metrics reset with the environment; scenario and evaluation history persist."

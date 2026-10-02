@@ -57,4 +57,8 @@ h1, h2, h3 { @apply text-navy; }
 
 @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 .skeleton { background: linear-gradient(90deg, #eef2f7 25%, #f7f9fc 37%, #eef2f7 63%); background-size: 800px 100%; animation: shimmer 1.4s ease infinite; @apply rounded-md; }
-@media (prefers-reduced-motion: reduce) { .skeleton, .animate-spin, .animate-pulse { animation: none !important; } }
+@keyframes dialog-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+.dialog-backdrop { animation: dialog-fade .15s ease-out; }
+.dialog-panel { animation: dialog-pop .18s cubic-bezier(.2,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) { .skeleton, .animate-spin, .animate-pulse, .dialog-backdrop, .dialog-panel { animation: none !important; } }

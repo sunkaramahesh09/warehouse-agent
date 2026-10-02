@@ -8,6 +8,7 @@ import { useApi, useAction } from './hooks';
 import { ErrorBox, Spinner, hhmm, type Icon } from './components/ui';
 import { Illustration } from './components/Illustration';
 import { Logo } from './components/Logo';
+import { DialogHost, confirmDialog } from './components/Dialog';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Inventory from './pages/Inventory';
@@ -200,7 +201,7 @@ export default function App() {
             </label>
             <button className={`btn-primary ${compact ? 'py-2 max-lg:gap-0 max-lg:px-3' : 'py-2.5'}`} disabled={!!reset.busy || role !== 'operator'} title={role !== 'operator' ? 'Operator only' : 'Restore the baseline seed'}
               aria-label={compact ? (reset.busy ? 'Resetting…' : 'Reset environment') : undefined}
-              onClick={() => { if (confirm('Reset the simulated environment to the baseline seed? All runs, plans and approvals are cleared.')) reset.run('reset', () => api.post('/api/reset')); }}>
+              onClick={async () => { if (await confirmDialog({ title: 'Reset environment?', message: 'The simulated environment returns to the baseline seed. All runs, plans and approvals are cleared.', confirmLabel: 'Reset environment', tone: 'danger' })) reset.run('reset', () => api.post('/api/reset')); }}>
               {reset.busy ? <Spinner /> : <RotateCcw className="h-4 w-4" aria-hidden />}
               <span className={`overflow-hidden whitespace-nowrap ${HDR_T} ${compact ? 'max-w-[160px] max-lg:max-w-0 max-lg:opacity-0' : 'max-w-[160px]'}`}>{reset.busy ? 'Resetting…' : 'Reset environment'}</span>
             </button>
@@ -238,6 +239,7 @@ export default function App() {
           {page === 'policies' && <Policies />}
         </main>
       </div>
+      <DialogHost />
     </div>
   );
 }

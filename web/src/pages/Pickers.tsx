@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Users, UserX, Clock, Gauge, UserCheck, Lightbulb, Layers } from 'lucide-react';
 import { api, getRole } from '../api';
 import { useApi, useAction } from '../hooks';
+import { promptDialog } from '../components/Dialog';
 import { Badge, Callout, EmptyState, ErrorBox, LoadingState, Meter, PageHeader, SearchInput, SectionCard, Select, Spinner, StatCard } from '../components/ui';
 
 const AVATAR = ['bg-sky-500', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-teal-600'];
@@ -17,9 +18,11 @@ export default function Pickers() {
   const isOperator = getRole() === 'operator';
 
   // Unchanged behaviour: prompt for a reason, then the controlled simulation tool (operator only).
-  const toggle = (p: any) => {
+  const toggle = async (p: any) => {
     const to = p.availability === 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE';
-    const reason = to === 'UNAVAILABLE' ? prompt(`Reason ${p.picker_id} becomes unavailable (simulated):`, 'Went home sick') : 'Back on shift';
+    const reason = to === 'UNAVAILABLE'
+      ? await promptDialog({ title: `Mark ${p.picker_id} unavailable?`, message: 'Simulated change — replan from the Shift Planner afterwards.', label: 'Reason', defaultValue: 'Went home sick', confirmLabel: 'Mark unavailable', tone: 'danger' })
+      : 'Back on shift';
     if (!reason) return;
     act.run(p.picker_id, () => api.post('/api/sim/picker', { picker_id: p.picker_id, availability: to, reason }));
   };
