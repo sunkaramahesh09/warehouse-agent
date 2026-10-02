@@ -52,7 +52,8 @@
 | **v1.2.7-ui** | tag `v1.2.7-ui` | `0521a835-e0ab-4089-b24d-e8a341e04c84` (removed) | Stronger header-art tilt: ±10°, perspective 700px, more layer parallax, 2% hover lift (tuning constants in `HeroArt.tsx` `useTilt`) |
 | **v1.2.8-ui** | tag `v1.2.8-ui` | `6061ca40-3910-4aee-a03f-138ae12f0b90` (removed) | Header compacts into a floating translucent bar while `#main` scrolls (`useCompactHeader` in `web/src/App.tsx`; header now overlays the layout, `#main` padded by `--hdr-full`) |
 | **v1.2.9-ui** | tag `v1.2.9-ui` | `9e73d9f7-77cb-413a-ba97-cb5f9d6266c3` (removed) | Compact header is a true floating glass bar: 56px, 12px/20px inset, 20px radius, blur 18 + saturate 140%, smaller logo/controls, triggers at 48px scroll |
-| **v1.3-submission** (current `main`) | tag `v1.3-submission` | `30eeec51-39df-4347-be0f-944b230c8618` | Submission-ready: docs/submission PDFs + AI_TOOLS.md, results refreshed (54 tests, 20/20 det, 20/20 Gemini), stale docs fixed. Only the demo video remains |
+| **v1.3-submission** | tag `v1.3-submission` | `30eeec51-39df-4347-be0f-944b230c8618` | Submission-ready: docs/submission PDFs + AI_TOOLS.md, results refreshed (54 tests, 20/20 det, 20/20 Gemini), stale docs fixed. Only the demo video remains |
+| **v1.3.1-ui** (current `main`) | tag `v1.3.1-ui` | `558b9b4e-9564-4f6a-9321-974cf3b02e25` | No native browser UI: in-app confirm/prompt dialogs (`web/src/components/Dialog.tsx`; reset, run evaluation, mark picker unavailable) + custom listbox `Select` replacing every native `<select>` (role switcher, filters, agent mode, planner picker) |
 
 Optional features were developed on `feature/optional-extras` and merged to `main` after tests + scenarios passed.
 
